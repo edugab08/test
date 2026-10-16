@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#090d16" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Finanças a Dois — 100% Cloud Sync</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #090d16; color: #f8fafc; -webkit-tap-highlight-color: transparent; }
+    .glass-card { background: rgba(17, 24, 39, 0.88); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    input, select, textarea { background-color: #1e293b !important; color: #f8fafc !important; border-color: #334155 !important; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #3b82f6 !important; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25); }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #090d16; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    .month-btn.active { background: linear-gradient(135deg, #2563eb, #4f46e5); color: #fff; border-color: #60a5fa; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35); }
+  </style>
+</head>
+<body class="min-h-screen pb-14 p-3 sm:p-6">
+
+  <!-- MODAL 1: CONEXÃO OBRIGATÓRIA COM A NUVEM DO CASAL -->
+  <div id="auth-modal" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="glass-card rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-700 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-bold text-white">☁️ Conectar Nuvem do Casal</h2>
+        <button id="btn-close-auth" onclick="closeAuthModal()" class="text-slate-400 hover:text-white text-sm px-2 py-1 hidden">✕</button>
+      </div>
+      <p class="text-xs text-slate-400 leading-relaxed">
+        Todos os lançamentos são salvos direto na planilha do Google de vocês em tempo real. Conecte uma única vez no seu aparelho e no dela.
+      </p>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[11px] text-slate-400 mb-1">Seu Nome (Pessoa 1)</label>
+          <input id="cfg-p1" type="text" value="Eduardo" required class="w-full px-3 py-2 rounded-lg border text-sm" />
+        </div>
+        <div>
+          <label class="block text-[11px] text-slate-400 mb-1">Nome Dela (Pessoa 2)</label>
+          <input id="cfg-p2" type="text" value="Namorada" required class="w-full px-3 py-2 rounded-lg border text-sm" />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-[11px] text-slate-400 mb-1">URL do Google Apps Script (Terminada em /exec)</label>
+        <input id="cfg-url" type="url" required placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2 rounded-lg border text-xs" />
+      </div>
+
+      <div>
+        <label class="block text-[11px] text-slate-400 mb-1">Senha Secreta do Casal (PIN)</label>
+        <input id="cfg-pin" type="password" required placeholder="Digite a SENHA_CASAL definida no script" class="w-full px-3 py-2 rounded-lg border text-sm" />
+      </div>
+
+      <div id="auth-error-msg" class="text-xs text-rose-400 font-medium hidden"></div>
+
+      <div class="pt-2">
+        <button id="btn-connect-cloud" onclick="saveCloudConfigAndSync()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-blue-600/25 transition">
+          🔗 Conectar e Sincronizar Agora
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: EDIÇÃO DE LANÇAMENTO -->
+  <div id="edit-modal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="glass-card rounded-2xl max-w-lg w-full p-5 sm:p-6 space-y-4 border border-slate-700 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h2 class="text-base sm:text-lg font-bold text-white">✏️ Editar Lançamento na Nuvem</h2>
+        <button onclick="closeEditModal()" class="text-slate-400 hover:text-white text-sm px-2 py-1">✕</button>
+      </div>
+
+      <form id="edit-form" onsubmit="saveEditedTransaction(event)" class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+        <input type="hidden" id="edit-id" />
+
+        <div class="sm:col-span-8">
+          <label class="block text-[11px] text-slate-400 mb-1">Título / Estabelecimento</label>
+          <input id="edit-desc" type="text" required class="w-full px-3 py-2 rounded-lg border text-sm" />
+        </div>
+
+        <div class="sm:col-span-4">
+          <label class="block text-[11px] text-slate-400 mb-1">Valor (R$)</label>
+          <input id="edit-amount" type="number" step="0.01" min="0.01" required class="w-full px-3 py-2 rounded-lg border text-sm font-semibold" />
+        </div>
+
+        <div class="sm:col-span-12">
+          <label class="block text-[11px] text-slate-400 mb-1">Breve Descrição / Detalhes do que foi gasto (Opcional)</label>
+          <input id="edit-notes" type="text" placeholder="Ex: Compras pro churrasco de domingo + produtos de limpeza"
+            class="w-full px-3 py-2 rounded-lg border text-xs" />
+        </div>
+
+        <div class="sm:col-span-3">
+          <label class="block text-[11px] text-slate-400 mb-1">Dia Venc./Compra</label>
+          <input id="edit-day" type="number" min="1" max="31" required class="w-full px-3 py-2 rounded-lg border text-sm text-center" />
+        </div>
+
+        <div class="sm:col-span-4">
+          <label class="block text-[11px] text-slate-400 mb-1">Status</label>
+          <select id="edit-status" class="w-full px-2.5 py-2 rounded-lg border text-xs">
+            <option value="paid">✅ Pago / Recebido</option>
+            <option value="pending">⏳ Pendente</option>
+          </select>
+        </div>
+
+        <div class="sm:col-span-5">
+          <label class="block text-[11px] text-slate-400 mb-1">Meio de Pagamento</label>
+          <select id="edit-method" class="w-full px-2.5 py-2 rounded-lg border text-xs">
+            <option value="PIX/Débito">⚡ PIX / Débito</option>
+            <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
+            <option value="Boleto">📄 Boleto / Débito Auto</option>
+          </select>
+        </div>
+
+        <div class="sm:col-span-4">
+          <label class="block text-[11px] text-slate-400 mb-1">Tipo</label>
+          <select id="edit-type" class="w-full px-2.5 py-2 rounded-lg border text-xs">
+            <option value="expense_fixed">Despesa Fixa</option>
+            <option value="expense_variable">Despesa Variável</option>
+            <option value="investment">Investimento / Meta</option>
+            <option value="income">Receita Extra</option>
+          </select>
+        </div>
+
+        <div class="sm:col-span-4">
+          <label class="block text-[11px] text-slate-400 mb-1">Categoria</label>
+          <select id="edit-category" class="w-full px-2.5 py-2 rounded-lg border text-xs">
+            <option value="Moradia & Contas">🏠 Moradia & Contas</option>
+            <option value="Alimentação">🛒 Alimentação</option>
+            <option value="Transporte">🚗 Transporte</option>
+            <option value="Educação & Saúde">📚 Educação & Saúde</option>
+            <option value="Lazer & Casal">🎮 Lazer & Casal</option>
+            <option value="Investimentos">📈 Investimentos / Meta</option>
+            <option value="Renda Extra">💰 Renda Extra</option>
+            <option value="Outros">📦 Outros</option>
+          </select>
+        </div>
+
+        <div class="sm:col-span-4">
+          <label class="block text-[11px] text-slate-400 mb-1">Responsável / Divisão</label>
+          <select id="edit-owner" class="w-full px-2.5 py-2 rounded-lg border text-xs"></select>
+        </div>
+
+        <div class="sm:col-span-12 flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-600/25 transition">
+            ☁️ Salvar na Nuvem
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <div class="max-w-7xl mx-auto space-y-5">
+    
+    <!-- Cabeçalho -->
+    <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pb-3 border-b border-slate-800/80">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span id="sync-dot" class="w-3 h-3 rounded-full bg-amber-400"></span>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white">Finanças a Dois</h1>
+              <span class="text-[10px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-semibold">100% Nuvem</span>
+            </div>
+            <p id="sync-status-text" class="text-[11px] text-slate-400">Aguardando conexão com a planilha do casal...</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="pullFromCloud(true)" class="px-3 py-2 text-xs font-semibold bg-blue-950/90 hover:bg-blue-900 text-blue-300 rounded-xl border border-blue-700/60 transition flex items-center gap-1.5">
+          <span>🔄 Atualizar Tela</span>
+        </button>
+
+        <input type="file" id="bank-csv-input" accept=".csv,.txt" class="hidden" onchange="handleBankCSVImport(event)" />
+        <button onclick="document.getElementById('bank-csv-input').click()"
+          class="px-3 py-2 text-xs font-medium bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 rounded-xl border border-emerald-700/50 transition">
+          📂 Importar CSV
+        </button>
+
+        <button onclick="copyFixedFromPrevMonth()" class="px-3 py-2 text-xs font-medium bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 rounded-xl border border-indigo-700/50 transition">
+          🔁 Copiar Fixas
+        </button>
+
+        <button onclick="openAuthModal()" class="px-3 py-2 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition">
+          🔐 Credenciais / Nomes
+        </button>
+
+        <button onclick="exportBackupJSON()" class="px-3 py-2 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition" title="Baixar Cópia de Segurança">
+          💾
+        </button>
+      </div>
+    </header>
+
+    <!-- LANÇAMENTO RÁPIDO INTELIGENTE COM CAMPO DE DESCRIÇÃO / OBSERVAÇÃO -->
+    <section class="glass-card rounded-2xl p-4 border-l-4 border-l-blue-500">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2.5">
+        <label class="text-xs sm:text-sm font-semibold text-white flex items-center gap-1.5">
+          <span>⚡ Lançamento Rápido na Nuvem</span>
+        </label>
+        <span class="text-[11px] text-slate-400">Ex: "mercado 380 cartao" ou "eletro 600 3x cartao"</span>
+      </div>
+
+      <form onsubmit="handleSmartAdd(event)" class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+        <div class="sm:col-span-3">
+          <select id="smart-owner" class="w-full px-3 py-2.5 rounded-xl border text-xs font-semibold"></select>
+        </div>
+        <div class="sm:col-span-4">
+          <input id="smart-input" type="text" required placeholder="O quê + Valor (Ex: 'Mercado 320 cartao')"
+            class="w-full px-3.5 py-2.5 rounded-xl border text-sm" />
+        </div>
+        <div class="sm:col-span-3">
+          <input id="smart-notes" type="text" placeholder="Breve descrição (Ex: Churrasco e bebidas)"
+            class="w-full px-3.5 py-2.5 rounded-xl border text-xs" />
+        </div>
+        <div class="sm:col-span-2">
+          <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-blue-600/20 transition">
+            ☁️ Lançar
+          </button>
+        </div>
+      </form>
+      <div id="smart-feedback" class="text-xs text-emerald-400 mt-2 hidden"></div>
+    </section>
+
+    <!-- Barra de Ano e 12 Meses -->
+    <section class="glass-card rounded-2xl p-3.5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-1.5">
+          <button onclick="changeYear(-1)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs">◀</button>
+          <span id="current-year-label" class="text-base font-bold text-white px-2">2026</span>
+          <button onclick="changeYear(1)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs">▶</button>
+        </div>
+        <h2 id="active-month-title" class="text-base sm:text-lg font-bold text-blue-400">Outubro de 2026</h2>
+        <div class="hidden sm:flex items-center gap-2 text-[11px] text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> Pendente
+          <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block ml-1"></span> Tudo Pago
+        </div>
+      </div>
+      <div id="months-grid" class="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-1.5"></div>
+    </section>
+
+    <!-- 4 Cards Principais: Renda, Despesas, Acerto de Contas do Casal e Meta/Saldo -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      
+      <!-- 1. Renda do Casal -->
+      <div class="glass-card rounded-2xl p-4">
+        <div class="flex justify-between items-center">
+          <span class="text-[11px] font-semibold uppercase text-slate-400">Renda do Casal</span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold">Mês</span>
+        </div>
+        <div id="kpi-income" class="text-2xl font-bold text-emerald-400 mt-1">R$ 0,00</div>
+        <div class="mt-3 pt-2 border-t border-slate-800 space-y-1.5 text-xs">
+          <div class="flex items-center justify-between">
+            <span id="label-sal-p1" class="text-slate-400">Pessoa 1:</span>
+            <input id="sal-p1-input" type="number" step="100" onchange="updateSalaries()" class="w-24 px-2 py-0.5 text-right rounded border text-xs font-semibold" />
+          </div>
+          <div class="flex items-center justify-between">
+            <span id="label-sal-p2" class="text-slate-400">Pessoa 2:</span>
+            <input id="sal-p2-input" type="number" step="100" onchange="updateSalaries()" class="w-24 px-2 py-0.5 text-right rounded border text-xs font-semibold" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Despesas & Cartão -->
+      <div class="glass-card rounded-2xl p-4">
+        <div class="flex justify-between items-center">
+          <span class="text-[11px] font-semibold uppercase text-slate-400">Total de Saídas</span>
+          <span id="kpi-card-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 font-semibold">💳 R$ 0</span>
+        </div>
+        <div id="kpi-expenses" class="text-2xl font-bold text-rose-400 mt-1">R$ 0,00</div>
+        <div class="mt-3 pt-2 border-t border-slate-800 space-y-1 text-xs text-slate-400">
+          <div class="flex justify-between"><span>Gastos Conjuntos:</span> <strong id="kpi-joint-exp" class="text-indigo-400">R$ 0,00</strong></div>
+          <div class="flex justify-between"><span>Pendente a Pagar:</span> <strong id="kpi-pending" class="text-amber-400">R$ 0,00</strong></div>
+        </div>
+      </div>
+
+      <!-- 3. Divisão Justa e Acerto de Contas -->
+      <div class="glass-card rounded-2xl p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-semibold uppercase text-slate-400">Divisão & Acerto</span>
+          <select id="split-mode" onchange="changeSplitMode(this.value)" class="text-[10px] px-1.5 py-0.5 rounded border">
+            <option value="50_50">Meio a Meio (50/50)</option>
+            <option value="prop">Proporcional à Renda</option>
+          </select>
+        </div>
+        <div id="split-summary-box" class="mt-2.5 space-y-1 text-xs text-slate-300"></div>
+        <div id="settlement-badge" class="mt-2.5 pt-2 border-t border-slate-800 text-[11px] font-medium text-amber-300"></div>
+      </div>
+
+      <!-- 4. Saldo Livre & Caixinha do Casal -->
+      <div class="glass-card rounded-2xl p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-semibold uppercase text-slate-400">Saldo Livre Mês</span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 font-semibold">Caixinha</span>
+        </div>
+        <div id="kpi-balance" class="text-2xl font-bold text-blue-400 mt-1">R$ 0,00</div>
+        <div class="mt-3 pt-2 border-t border-slate-800 space-y-1 text-xs">
+          <div class="flex justify-between text-slate-400">
+            <span>Guardado no Mês:</span>
+            <strong id="kpi-invest-month" class="text-cyan-400">R$ 0,00</strong>
+          </div>
+          <div class="flex justify-between text-slate-400">
+            <span>Acumulado no Ano:</span>
+            <strong id="kpi-invest-year" class="text-emerald-400">R$ 0,00</strong>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Área Principal: Cadastro Detalhado + Tabela + Gráficos -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      
+      <!-- Coluna Esquerda (7 colunas) -->
+      <div class="lg:col-span-7 space-y-4">
+
+        <!-- Formulário Completo Retrátil -->
+        <details class="glass-card rounded-2xl p-4 group">
+          <summary class="cursor-pointer list-none flex items-center justify-between font-semibold text-sm text-white">
+            <span>🛠️ Cadastro Manual Completo (Parcelamentos, Vencimento e Observações)</span>
+            <span class="text-xs text-blue-400 group-open:rotate-180 transition-transform">▼</span>
+          </summary>
+
+          <form id="detailed-form" onsubmit="handleDetailedAdd(event)" class="grid grid-cols-1 sm:grid-cols-12 gap-3 mt-4 pt-3 border-t border-slate-800">
+            <div class="sm:col-span-5">
+              <label class="block text-[11px] text-slate-400 mb-1">Título / Onde gastou</label>
+              <input id="tx-desc" type="text" required placeholder="Ex: Supermercado, Aluguel..." class="w-full px-3 py-2 rounded-lg border text-sm" />
+            </div>
+            <div class="sm:col-span-3">
+              <label class="block text-[11px] text-slate-400 mb-1">Valor Parcela (R$)</label>
+              <input id="tx-amount" type="number" step="0.01" min="0.01" required placeholder="0,00" class="w-full px-3 py-2 rounded-lg border text-sm" />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-[11px] text-slate-400 mb-1">Dia</label>
+              <input id="tx-day" type="number" min="1" max="31" value="10" required class="w-full px-3 py-2 rounded-lg border text-sm text-center" />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-[11px] text-slate-400 mb-1">Status</label>
+              <select id="tx-status" class="w-full px-2 py-2 rounded-lg border text-xs">
+                <option value="paid">✅ Pago</option>
+                <option value="pending">⏳ Pend.</option>
+              </select>
+            </div>
+
+            <div class="sm:col-span-12">
+              <label class="block text-[11px] text-slate-400 mb-1">Breve Descrição / Detalhes do Gasto (Opcional)</label>
+              <input id="tx-notes" type="text" placeholder="Ex: Compras da semana + itens de limpeza da casa" class="w-full px-3 py-2 rounded-lg border text-xs" />
+            </div>
+
+            <div class="sm:col-span-3">
+              <label class="block text-[11px] text-slate-400 mb-1">Tipo</label>
+              <select id="tx-type" class="w-full px-2.5 py-2 rounded-lg border text-xs">
+                <option value="expense_fixed">Despesa Fixa</option>
+                <option value="expense_variable">Variável</option>
+                <option value="investment">Investimento / Meta</option>
+                <option value="income">Receita Extra</option>
+              </select>
+            </div>
+            <div class="sm:col-span-3">
+              <label class="block text-[11px] text-slate-400 mb-1">Categoria</label>
+              <select id="tx-category" class="w-full px-2.5 py-2 rounded-lg border text-xs">
+                <option value="Moradia & Contas">🏠 Moradia & Contas</option>
+                <option value="Alimentação">🛒 Alimentação</option>
+                <option value="Transporte">🚗 Transporte</option>
+                <option value="Educação & Saúde">📚 Educação & Saúde</option>
+                <option value="Lazer & Casal">🎮 Lazer & Casal</option>
+                <option value="Investimentos">📈 Investimentos</option>
+                <option value="Renda Extra">💰 Renda Extra</option>
+                <option value="Outros">📦 Outros</option>
+              </select>
+            </div>
+            <div class="sm:col-span-3">
+              <label class="block text-[11px] text-slate-400 mb-1">Meio Pagto.</label>
+              <select id="tx-method" class="w-full px-2.5 py-2 rounded-lg border text-xs">
+                <option value="PIX/Débito">⚡ PIX / Débito</option>
+                <option value="Cartão de Crédito">💳 Cartão Crédito</option>
+                <option value="Boleto">📄 Boleto</option>
+              </select>
+            </div>
+            <div class="sm:col-span-3">
+              <label class="block text-[11px] text-slate-400 mb-1">Recorrência</label>
+              <select id="tx-recurrence" class="w-full px-2.5 py-2 rounded-lg border text-xs">
+                <option value="1">1x (Apenas este mês)</option>
+                <option value="fixed_12">Fixa (12 meses)</option>
+                <option value="2">Parcelado 2x</option>
+                <option value="3">Parcelado 3x</option>
+                <option value="4">Parcelado 4x</option>
+                <option value="6">Parcelado 6x</option>
+                <option value="10">Parcelado 10x</option>
+                <option value="12">Parcelado 12x</option>
+              </select>
+            </div>
+
+            <div class="sm:col-span-6">
+              <label class="block text-[11px] text-slate-400 mb-1">Responsável</label>
+              <select id="tx-owner" class="w-full px-2.5 py-2 rounded-lg border text-xs"></select>
+            </div>
+            <div class="sm:col-span-6 flex items-end">
+              <button type="submit" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-lg transition">
+                ☁️ Salvar Lançamento na Nuvem
+              </button>
+            </div>
+          </form>
+        </details>
+
+        <!-- Tabela de Lançamentos com Busca e Botão Editar -->
+        <div class="glass-card rounded-2xl p-4 sm:p-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3">
+            <div>
+              <h3 class="text-base font-semibold text-white">📋 Lançamentos do Mês</h3>
+              <p class="text-[11px] text-slate-400">Clique em ✏️ para corrigir qualquer item ou adicionar observações.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <input id="filter-search" type="text" oninput="renderAll()" placeholder="Buscar título ou descrição..."
+                class="px-3 py-1.5 rounded-lg border text-xs w-44" />
+              <select id="filter-owner" onchange="renderAll()" class="px-2.5 py-1.5 rounded-lg border text-xs">
+                <option value="ALL">Todos</option>
+                <option value="joint">💑 Conjuntas</option>
+                <option value="p1" id="opt-filter-p1">Pessoa 1</option>
+                <option value="p2" id="opt-filter-p2">Pessoa 2</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto max-h-[480px] overflow-y-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-800 text-[11px] uppercase text-slate-400">
+                  <th class="py-2 px-1.5">Dia</th>
+                  <th class="py-2 px-1.5">Status</th>
+                  <th class="py-2 px-1.5">Item & Descrição</th>
+                  <th class="py-2 px-1.5">Divisão</th>
+                  <th class="py-2 px-1.5 text-right">Valor</th>
+                  <th class="py-2 px-1.5 text-center">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tx-table-body" class="divide-y divide-slate-800/60 text-xs sm:text-sm"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Coluna Direita: Gráficos (5 colunas) -->
+      <div class="lg:col-span-5 space-y-4">
+        
+        <div class="glass-card rounded-2xl p-4 sm:p-5">
+          <h3 class="text-sm sm:text-base font-semibold text-white mb-1">📅 Evolução Anual do Casal (<span id="chart-year-label">2026</span>)</h3>
+          <p class="text-xs text-slate-400 mb-3">Comparativo de Entradas vs. Saídas de Jan a Dez</p>
+          <div class="relative h-52">
+            <canvas id="annualChart"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4 sm:p-5">
+          <h3 class="text-sm sm:text-base font-semibold text-white mb-1">📊 Gastos por Categoria no Mês</h3>
+          <p class="text-xs text-slate-400 mb-2">Para onde está indo o dinheiro neste mês</p>
+          <div class="relative h-52 flex items-center justify-center">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Apenas as credenciais de conexão (URL e Senha) ficam salvas no aparelho para vocês não precisarem digitar toda hora.
+    // Os lançamentos e salários vêm 100% da nuvem (Google Sheets).
+    const LOCAL_CFG_KEY = 'financas_casal_cfg_cloud_v3';
+    const MONTH_NAMES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const MONTH_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+    let currentYear = new Date().getFullYear();
+    let currentMonth = new Date().getMonth();
+    let categoryChartInstance = null;
+    let annualChartInstance = null;
+    let isSyncing = false;
+
+    let cloudCfg = loadCloudCfg();
+    let state = { splitMode: '50_50', salariesP1: {}, salariesP2: {}, transactions: [] };
+
+    function loadCloudCfg() {
+      const saved = localStorage.getItem(LOCAL_CFG_KEY);
+      if (saved) { try { return JSON.parse(saved); } catch (e) {} }
+      return { p1Name: 'Eduardo', p2Name: 'Namorada', scriptUrl: '', pin: '' };
+    }
+
+    function hasValidCloudConfig() {
+      return Boolean(cloudCfg && cloudCfg.scriptUrl && cloudCfg.pin);
+    }
+
+    function ensureConnected() {
+      if (!hasValidCloudConfig()) {
+        openAuthModal();
+        return false;
+      }
+      return true;
+    }
+
+    function getMonthKey(y, m) {
+      return `${y}-${String(m + 1).padStart(2, '0')}`;
+    }
+
+    function addMonthsToYearMonth(year, monthIdx, offset) {
+      const total = year * 12 + monthIdx + offset;
+      return getMonthKey(Math.floor(total / 12), total % 12);
+    }
+
+    function formatBRL(v) {
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+    }
+
+    // MOTOR 100% CLOUD: PUXA A VERSÃO MAIS RECENTE DA PLANILHA, APLICA A MUDANÇA E SALVA DE VOLTA
+    // Isso evita que o celular de um apague o que o outro acabou de cadastrar!
+    async function mutateCloudState(mutatorFn) {
+      if (!ensureConnected()) return;
+      if (isSyncing) return;
+      isSyncing = true;
+
+      setSyncIndicator('syncing', 'Sincronizando com a planilha do casal...');
+      try {
+        // 1. Buscar estado mais recente na nuvem antes de alterar
+        const getUrl = `${cloudCfg.scriptUrl}?pin=${encodeURIComponent(cloudCfg.pin)}&t=${Date.now()}`;
+        const getRes = await fetch(getUrl, { cache: 'no-store' });
+        const getJson = await getRes.json();
+
+        if (getJson.error) {
+          setSyncIndicator('err', getJson.error);
+          alert(getJson.error);
+          openAuthModal();
+          isSyncing = false;
+          return;
+        }
+
+        if (getJson.data && Array.isArray(getJson.data.transactions)) {
+          state = {
+            splitMode: getJson.data.splitMode || '50_50',
+            salariesP1: getJson.data.salariesP1 || {},
+            salariesP2: getJson.data.salariesP2 || {},
+            transactions: getJson.data.transactions || []
+          };
+        }
+
+        // 2. Aplicar a adição, edição ou exclusão sobre a base atualizada
+        mutatorFn(state);
+        renderAll();
+
+        // 3. Gravar o novo estado consolidado na planilha
+        const postRes = await fetch(cloudCfg.scriptUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ pin: cloudCfg.pin, data: state })
+        });
+        const postJson = await postRes.json();
+
+        if (postJson.status === 'salvo') {
+          const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          setSyncIndicator('ok', `Salvo na nuvem às ${hora} • Visível para ambos`);
+        } else {
+          setSyncIndicator('err', postJson.error || 'Erro ao gravar na planilha');
+        }
+      } catch (err) {
+        setSyncIndicator('err', 'Falha de conexão com a internet. Tente novamente.');
+        alert('Não foi possível salvar na nuvem. Verifique sua conexão com a internet.');
+      } finally {
+        isSyncing = false;
+      }
+    }
+
+    async function pullFromCloud(showAlertOnError = false) {
+      if (!hasValidCloudConfig()) {
+        openAuthModal();
+        return false;
+      }
+      if (isSyncing) return false;
+      isSyncing = true;
+
+      setSyncIndicator('syncing', 'Atualizando dados da nuvem...');
+      try {
+        const url = `${cloudCfg.scriptUrl}?pin=${encodeURIComponent(cloudCfg.pin)}&t=${Date.now()}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        const json = await res.json();
+
+        if (json.error) {
+          setSyncIndicator('err', json.error);
+          if (showAlertOnError) alert(json.error);
+          openAuthModal();
+          isSyncing = false;
+          return false;
+        }
+
+        if (json.data && Array.isArray(json.data.transactions)) {
+          state = {
+            splitMode: json.data.splitMode || '50_50',
+            salariesP1: json.data.salariesP1 || {},
+            salariesP2: json.data.salariesP2 || {},
+            transactions: json.data.transactions || []
+          };
+          renderAll();
+        }
+        const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        setSyncIndicator('ok', `Sincronizado em tempo real (${hora})`);
+        isSyncing = false;
+        return true;
+      } catch (err) {
+        setSyncIndicator('err', 'Erro ao conectar na planilha');
+        if (showAlertOnError) alert('Não foi possível conectar à URL do Google Apps Script. Verifique a URL e sua internet.');
+        isSyncing = false;
+        return false;
+      }
+    }
+
+    function setSyncIndicator(status, text) {
+      const dot = document.getElementById('sync-dot');
+      const label = document.getElementById('sync-status-text');
+      label.textContent = text;
+      if (status === 'ok') dot.className = 'w-3 h-3 rounded-full bg-emerald-400';
+      else if (status === 'syncing') dot.className = 'w-3 h-3 rounded-full bg-blue-400 animate-ping';
+      else dot.className = 'w-3 h-3 rounded-full bg-rose-500';
+    }
+
+    function openAuthModal() {
+      document.getElementById('cfg-p1').value = cloudCfg.p1Name || 'Eduardo';
+      document.getElementById('cfg-p2').value = cloudCfg.p2Name || 'Namorada';
+      document.getElementById('cfg-url').value = cloudCfg.scriptUrl || '';
+      document.getElementById('cfg-pin').value = cloudCfg.pin || '';
+      const closeBtn = document.getElementById('btn-close-auth');
+      if (hasValidCloudConfig()) closeBtn.classList.remove('hidden');
+      else closeBtn.classList.add('hidden');
+      document.getElementById('auth-modal').classList.remove('hidden');
+    }
+
+    function closeAuthModal() {
+      if (!hasValidCloudConfig()) return;
+      document.getElementById('auth-modal').classList.add('hidden');
+    }
+
+    async function saveCloudConfigAndSync() {
+      const p1Name = document.getElementById('cfg-p1').value.trim() || 'Pessoa 1';
+      const p2Name = document.getElementById('cfg-p2').value.trim() || 'Pessoa 2';
+      const scriptUrl = document.getElementById('cfg-url').value.trim();
+      const pin = document.getElementById('cfg-pin').value.trim();
+      const errEl = document.getElementById('auth-error-msg');
+
+      if (!scriptUrl || !pin) {
+        errEl.textContent = 'Preencha a URL do Google Apps Script e a Senha do Casal.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      errEl.classList.add('hidden');
+      const btn = document.getElementById('btn-connect-cloud');
+      btn.textContent = 'Conectando à planilha...';
+      btn.disabled = true;
+
+      cloudCfg = { p1Name, p2Name, scriptUrl, pin };
+      const ok = await pullFromCloud(true);
+
+      btn.textContent = '🔗 Conectar e Sincronizar Agora';
+      btn.disabled = false;
+
+      if (ok) {
+        localStorage.setItem(LOCAL_CFG_KEY, JSON.stringify(cloudCfg));
+        document.getElementById('auth-modal').classList.add('hidden');
+        renderAll();
+      }
+    }
+
+    // REGRAS DE AUTO-CATEGORIZAÇÃO
+    const RULES = [
+      { k: ['aluguel', 'condominio', 'iptu', 'luz', 'energia', 'copel', 'agua', 'sanepar', 'internet', 'fibra', 'gas'], cat: 'Moradia & Contas', type: 'expense_fixed' },
+      { k: ['mercado', 'supermercado', 'atacadao', 'padaria', 'acougue', 'feira', 'hortifruti'], cat: 'Alimentação', type: 'expense_fixed' },
+      { k: ['uber', '99', 'gasolina', 'posto', 'combustivel', 'estacionamento', 'pedagio'], cat: 'Transporte', type: 'expense_fixed' },
+      { k: ['faculdade', 'curso', 'farmacia', 'medico', 'consulta', 'exame', 'academia'], cat: 'Educação & Saúde', type: 'expense_fixed' },
+      { k: ['ifood', 'restaurante', 'lanche', 'pizza', 'cinema', 'bar', 'viagem', 'hotel', 'presente', 'shopping', 'tenis', 'roupa', 'jantar'], cat: 'Lazer & Casal', type: 'expense_variable' },
+      { k: ['reserva', 'cdi', 'investimento', 'caixinha', 'tesouro', 'meta'], cat: 'Investimentos', type: 'investment' }
+    ];
+
+    function inferCategory(desc) {
+      const l = desc.toLowerCase();
+      for (const r of RULES) {
+        if (r.k.some(w => l.includes(w))) return { category: r.cat, type: r.type };
+      }
+      return { category: 'Outros', type: 'expense_variable' };
+    }
+
+    // 1. LANÇAMENTO RÁPIDO NA NUVEM
+    async function handleSmartAdd(e) {
+      e.preventDefault();
+      if (!ensureConnected()) return;
+
+      const raw = document.getElementById('smart-input').value.trim();
+      const notes = document.getElementById('smart-notes').value.trim();
+      const owner = document.getElementById('smart-owner').value;
+      if (!raw) return;
+
+      const parcelMatch = raw.match(/\b(\d{1,2})x\b/i);
+      const installments = parcelMatch ? Math.min(24, Math.max(1, parseInt(parcelMatch[1], 10))) : 1;
+
+      let method = /\b(cartao|cartão|credito|crédito)\b/i.test(raw) || installments > 1 ? 'Cartão de Crédito' : 'PIX/Débito';
+      if (/\bboleto\b/i.test(raw)) method = 'Boleto';
+      const isIncome = raw.includes('+');
+
+      const cleaned = raw.replace(/\b\d{1,2}x\b/gi, '');
+      const valMatch = cleaned.match(/[+-]?\d+(?:[.,]\d{1,2})?/);
+      if (!valMatch) return alert('Informe o valor! Ex: "Mercado 320 cartao"');
+
+      const totalVal = Math.abs(parseFloat(valMatch[0].replace(',', '.')));
+      const parcelVal = installments > 1 ? +(totalVal / installments).toFixed(2) : totalVal;
+
+      let desc = raw.replace(valMatch[0], '').replace(/\b\d{1,2}x\b/gi, '').replace(/\b(pix|cartao|cartão|credito|crédito|debito|débito|boleto)\b/gi, '').trim();
+      if (!desc) desc = 'Lançamento';
+      desc = desc.charAt(0).toUpperCase() + desc.slice(1);
+
+      const inf = inferCategory(desc + ' ' + notes);
+      const baseId = Date.now();
+      const today = new Date().getDate();
+
+      document.getElementById('smart-input').value = '';
+      document.getElementById('smart-notes').value = '';
+
+      await mutateCloudState(s => {
+        for (let i = 0; i < installments; i++) {
+          s.transactions.push({
+            id: baseId + i,
+            monthKey: addMonthsToYearMonth(currentYear, currentMonth, i),
+            day: today,
+            desc: installments > 1 ? `${desc} (${i + 1}/${installments})` : desc,
+            notes: notes || '',
+            amount: parcelVal,
+            category: isIncome ? 'Renda Extra' : inf.category,
+            type: isIncome ? 'income' : inf.type,
+            method,
+            owner,
+            status: i === 0 && method === 'PIX/Débito' ? 'paid' : 'pending'
+          });
+        }
+      });
+    }
+
+    // 2. LANÇAMENTO DETALHADO NA NUVEM
+    async function handleDetailedAdd(e) {
+      e.preventDefault();
+      if (!ensureConnected()) return;
+
+      const desc = document.getElementById('tx-desc').value.trim();
+      const notes = document.getElementById('tx-notes').value.trim();
+      const amount = parseFloat(document.getElementById('tx-amount').value);
+      const day = Math.min(31, Math.max(1, parseInt(document.getElementById('tx-day').value, 10) || 10));
+      const status = document.getElementById('tx-status').value;
+      const type = document.getElementById('tx-type').value;
+      const category = document.getElementById('tx-category').value;
+      const method = document.getElementById('tx-method').value;
+      const recurrence = document.getElementById('tx-recurrence').value;
+      const owner = document.getElementById('tx-owner').value;
+
+      if (!desc || isNaN(amount) || amount <= 0) return;
+      const baseId = Date.now();
+
+      document.getElementById('tx-desc').value = '';
+      document.getElementById('tx-notes').value = '';
+      document.getElementById('tx-amount').value = '';
+      document.getElementById('tx-recurrence').value = '1';
+
+      await mutateCloudState(s => {
+        if (recurrence === 'fixed_12') {
+          for (let i = 0; i < 12; i++) {
+            s.transactions.push({
+              id: baseId + i,
+              monthKey: addMonthsToYearMonth(currentYear, currentMonth, i),
+              day, desc, notes, amount, type, category, method, owner,
+              status: i === 0 ? status : 'pending'
+            });
+          }
+        } else {
+          const installments = parseInt(recurrence, 10) || 1;
+          for (let i = 0; i < installments; i++) {
+            s.transactions.push({
+              id: baseId + i,
+              monthKey: addMonthsToYearMonth(currentYear, currentMonth, i),
+              day,
+              desc: installments > 1 ? `${desc} (${i + 1}/${installments})` : desc,
+              notes, amount, type, category, method, owner,
+              status: i === 0 ? status : 'pending'
+            });
+          }
+        }
+      });
+    }
+
+    // 3. EDIÇÃO DE LANÇAMENTO DIRETO NA NUVEM
+    function openEditModal(id) {
+      const tx = state.transactions.find(t => t.id === id);
+      if (!tx) return;
+
+      document.getElementById('edit-id').value = tx.id;
+      document.getElementById('edit-desc').value = tx.desc || '';
+      document.getElementById('edit-notes').value = tx.notes || '';
+      document.getElementById('edit-amount').value = tx.amount || 0;
+      document.getElementById('edit-day').value = tx.day || 10;
+      document.getElementById('edit-status').value = tx.status || 'pending';
+      document.getElementById('edit-method').value = tx.method || 'PIX/Débito';
+      document.getElementById('edit-type').value = tx.type || 'expense_variable';
+      document.getElementById('edit-category').value = tx.category || 'Outros';
+      document.getElementById('edit-owner').value = tx.owner || 'joint';
+
+      document.getElementById('edit-modal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.add('hidden');
+    }
+
+    async function saveEditedTransaction(e) {
+      e.preventDefault();
+      const id = Number(document.getElementById('edit-id').value);
+      const updated = {
+        desc: document.getElementById('edit-desc').value.trim(),
+        notes: document.getElementById('edit-notes').value.trim(),
+        amount: Math.max(0.01, parseFloat(document.getElementById('edit-amount').value) || 0),
+        day: Math.min(31, Math.max(1, parseInt(document.getElementById('edit-day').value, 10) || 1)),
+        status: document.getElementById('edit-status').value,
+        method: document.getElementById('edit-method').value,
+        type: document.getElementById('edit-type').value,
+        category: document.getElementById('edit-category').value,
+        owner: document.getElementById('edit-owner').value
+      };
+
+      closeEditModal();
+      await mutateCloudState(s => {
+        const tx = s.transactions.find(t => t.id === id);
+        if (tx) Object.assign(tx, updated);
+      });
+    }
+
+    // IMPORTADOR CSV BANCÁRIO DIRETO PARA A NUVEM
+    function handleBankCSVImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const lines = e.target.result.split(/\r?\n/).filter(l => l.trim().length > 0);
+        if (lines.length < 2) return;
+        const newItems = [];
+        const baseId = Date.now();
+
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(/[;,]/).map(c => c.replace(/^"|"$/g, '').trim());
+          if (cols.length < 2) continue;
+
+          let day = 10, targetMk = getMonthKey(currentYear, currentMonth), amount = null, descParts = [];
+          cols.forEach(col => {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(col)) {
+              const p = col.split('-'); targetMk = `${p[0]}-${p[1]}`; day = parseInt(p[2], 10);
+            } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(col)) {
+              const p = col.split('/'); day = parseInt(p[0], 10); targetMk = `${p[2]}-${p[1]}`;
+            } else if (/^-?\d+(\.\d{1,2}|,\d{1,2})$/.test(col)) {
+              amount = parseFloat(col.replace(',', '.'));
+            } else if (col.length > 2) {
+              descParts.push(col);
+            }
+          });
+
+          if (amount === null || isNaN(amount) || amount === 0) continue;
+          const desc = descParts[0] || 'Item Importado';
+          const notes = descParts.slice(1).join(' • ');
+          const inf = inferCategory(desc + ' ' + notes);
+
+          newItems.push({
+            id: baseId + i, monthKey: targetMk, day, desc, notes,
+            amount: Math.abs(amount), category: inf.category, type: inf.type,
+            method: 'Cartão de Crédito', owner: 'joint', status: 'paid'
+          });
+        }
+
+        if (newItems.length > 0) {
+          await mutateCloudState(s => {
+            s.transactions.push(...newItems);
+          });
+          alert(`${newItems.length} lançamento(s) salvos na nuvem!`);
+        }
+        event.target.value = '';
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
+
+    async function updateSalaries() {
+      const mk = getMonthKey(currentYear, currentMonth);
+      const val1 = Math.max(0, parseFloat(document.getElementById('sal-p1-input').value) || 0);
+      const val2 = Math.max(0, parseFloat(document.getElementById('sal-p2-input').value) || 0);
+      await mutateCloudState(s => {
+        s.salariesP1[mk] = val1;
+        s.salariesP2[mk] = val2;
+      });
+    }
+
+    async function changeSplitMode(val) {
+      await mutateCloudState(s => {
+        s.splitMode = val;
+      });
+    }
+
+    async function toggleStatus(id) {
+      await mutateCloudState(s => {
+        const item = s.transactions.find(t => t.id === id);
+        if (item) item.status = item.status === 'paid' ? 'pending' : 'paid';
+      });
+    }
+
+    async function deleteTransaction(id) {
+      if (!confirm('Deseja excluir este lançamento da nuvem do casal?')) return;
+      await mutateCloudState(s => {
+        s.transactions = s.transactions.filter(t => t.id !== id);
+      });
+    }
+
+    async function copyFixedFromPrevMonth() {
+      const prevMk = addMonthsToYearMonth(currentYear, currentMonth, -1);
+      const currMk = getMonthKey(currentYear, currentMonth);
+      let added = 0;
+
+      await mutateCloudState(s => {
+        const fixed = s.transactions.filter(t => t.monthKey === prevMk && t.type === 'expense_fixed');
+        fixed.forEach((f, idx) => {
+          if (!s.transactions.some(t => t.monthKey === currMk && t.desc === f.desc)) {
+            s.transactions.push({ ...f, id: Date.now() + idx, monthKey: currMk, status: 'pending' });
+            added++;
+          }
+        });
+      });
+
+      if (added === 0) alert('Nenhuma despesa fixa nova para copiar do mês anterior.');
+      else alert(`${added} despesa(s) fixa(s) copiada(s) e salva(s) na nuvem!`);
+    }
+
+    function exportBackupJSON() {
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state, null, 2));
+      const link = document.createElement('a');
+      link.setAttribute('href', dataStr);
+      link.setAttribute('download', `backup_casal_${currentYear}.json`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function changeYear(d) { currentYear += d; renderAll(); }
+    function selectMonth(m) { currentMonth = m; renderAll(); }
+
+    function populateOwnerSelects(p1, p2) {
+      const html = `
+        <option value="joint">💑 Conta Conjunta (A dividir)</option>
+        <option value="p1">💑 Pago por ${p1} (Conjunta)</option>
+        <option value="p2">💑 Pago por ${p2} (Conjunta)</option>
+        <option value="p1_ind">👤 Individual (${p1})</option>
+        <option value="p2_ind">👤 Individual (${p2})</option>
+      `;
+      ['smart-owner', 'tx-owner', 'edit-owner'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          const val = el.value || 'joint';
+          el.innerHTML = html;
+          el.value = val;
+        }
+      });
+    }
+
+    function renderAll() {
+      const p1 = cloudCfg.p1Name || 'Eduardo';
+      const p2 = cloudCfg.p2Name || 'Namorada';
+
+      populateOwnerSelects(p1, p2);
+
+      document.getElementById('label-sal-p1').textContent = `${p1}:`;
+      document.getElementById('label-sal-p2').textContent = `${p2}:`;
+      document.getElementById('opt-filter-p1').textContent = `Apenas ${p1}`;
+      document.getElementById('opt-filter-p2').textContent = `Apenas ${p2}`;
+
+      document.getElementById('current-year-label').textContent = currentYear;
+      document.getElementById('chart-year-label').textContent = currentYear;
+      document.getElementById('active-month-title').textContent = `${MONTH_NAMES[currentMonth]} de ${currentYear}`;
+      document.getElementById('split-mode').value = state.splitMode || '50_50';
+
+      // Grade de 12 meses
+      document.getElementById('months-grid').innerHTML = MONTH_SHORT.map((mLabel, idx) => {
+        const mk = getMonthKey(currentYear, idx);
+        const mTxs = state.transactions.filter(t => t.monthKey === mk && t.type !== 'income');
+        const hasPend = mTxs.some(t => t.status === 'pending');
+        const dot = mTxs.length ? `<span class="w-1.5 h-1.5 rounded-full ${hasPend ? 'bg-amber-400' : 'bg-emerald-400'}"></span>` : '';
+        return `
+          <button onclick="selectMonth(${idx})" class="month-btn ${idx === currentMonth ? 'active' : 'bg-slate-900/90 text-slate-300 border-slate-800'} border rounded-xl py-2 px-1 flex items-center justify-center gap-1 text-xs font-semibold transition">
+            <span>${mLabel}</span>${dot}
+          </button>`;
+      }).join('');
+
+      const mk = getMonthKey(currentYear, currentMonth);
+      const sal1 = state.salariesP1[mk] || 0;
+      const sal2 = state.salariesP2[mk] || 0;
+      document.getElementById('sal-p1-input').value = sal1;
+      document.getElementById('sal-p2-input').value = sal2;
+
+      const mTxs = state.transactions.filter(t => t.monthKey === mk);
+      const extraInc = mTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+      const totalIncome = sal1 + sal2 + extraInc;
+
+      const outflows = mTxs.filter(t => t.type !== 'income');
+      const totalExp = outflows.filter(t => t.type !== 'investment').reduce((s, t) => s + t.amount, 0);
+      const totalInvMonth = outflows.filter(t => t.type === 'investment').reduce((s, t) => s + t.amount, 0);
+      const pendingExp = outflows.filter(t => t.status === 'pending').reduce((s, t) => s + t.amount, 0);
+      const cardExp = outflows.filter(t => t.method === 'Cartão de Crédito').reduce((s, t) => s + t.amount, 0);
+
+      const yearPrefix = `${currentYear}-`;
+      const totalInvYear = state.transactions
+        .filter(t => t.monthKey && t.monthKey.startsWith(yearPrefix) && t.type === 'investment')
+        .reduce((s, t) => s + t.amount, 0);
+
+      const jointTxs = outflows.filter(t => t.owner === 'joint' || t.owner === 'p1' || t.owner === 'p2');
+      const jointTotal = jointTxs.reduce((s, t) => s + t.amount, 0);
+      const paidByP1 = jointTxs.filter(t => t.owner === 'p1').reduce((s, t) => s + t.amount, 0);
+      const paidByP2 = jointTxs.filter(t => t.owner === 'p2').reduce((s, t) => s + t.amount, 0);
+
+      const totalSal = sal1 + sal2;
+      let p1SharePct = 0.5, p2SharePct = 0.5;
+      if (state.splitMode === 'prop' && totalSal > 0) {
+        p1SharePct = sal1 / totalSal;
+        p2SharePct = sal2 / totalSal;
+      }
+
+      const p1ShouldPay = jointTotal * p1SharePct;
+      const p2ShouldPay = jointTotal * p2SharePct;
+
+      document.getElementById('kpi-income').textContent = formatBRL(totalIncome);
+      document.getElementById('kpi-expenses').textContent = formatBRL(totalExp);
+      document.getElementById('kpi-card-badge').textContent = `💳 ${formatBRL(cardExp)}`;
+      document.getElementById('kpi-joint-exp').textContent = formatBRL(jointTotal);
+      document.getElementById('kpi-pending').textContent = formatBRL(pendingExp);
+      document.getElementById('kpi-balance').textContent = formatBRL(totalIncome - totalExp - totalInvMonth);
+      document.getElementById('kpi-invest-month').textContent = formatBRL(totalInvMonth);
+      document.getElementById('kpi-invest-year').textContent = formatBRL(totalInvYear);
+
+      document.getElementById('split-summary-box').innerHTML = `
+        <div class="flex justify-between"><span>Parte de ${p1} (${(p1SharePct * 100).toFixed(0)}%):</span> <strong class="text-white">${formatBRL(p1ShouldPay)}</strong></div>
+        <div class="flex justify-between"><span>Parte de ${p2} (${(p2SharePct * 100).toFixed(0)}%):</span> <strong class="text-white">${formatBRL(p2ShouldPay)}</strong></div>
+      `;
+
+      const settlementEl = document.getElementById('settlement-badge');
+      if (paidByP1 > 0 || paidByP2 > 0) {
+        const p1Net = paidByP1 - (paidByP1 + paidByP2) * p1SharePct;
+        if (Math.abs(p1Net) < 1) {
+          settlementEl.textContent = '✨ Contas conjuntas equilibradas!';
+          settlementEl.className = 'mt-2.5 pt-2 border-t border-slate-800 text-[11px] font-medium text-emerald-400';
+        } else if (p1Net > 0) {
+          settlementEl.textContent = `🔄 Acerto: ${p2} transfere ${formatBRL(p1Net)} para ${p1}`;
+          settlementEl.className = 'mt-2.5 pt-2 border-t border-slate-800 text-[11px] font-medium text-amber-300';
+        } else {
+          settlementEl.textContent = `🔄 Acerto: ${p1} transfere ${formatBRL(Math.abs(p1Net))} para ${p2}`;
+          settlementEl.className = 'mt-2.5 pt-2 border-t border-slate-800 text-[11px] font-medium text-amber-300';
+        }
+      } else {
+        settlementEl.textContent = '💡 Marque quem pagou cada conta conjunta para calcular o acerto.';
+        settlementEl.className = 'mt-2.5 pt-2 border-t border-slate-800 text-[10px] text-slate-400';
+      }
+
+      renderTable(mTxs, p1, p2);
+      renderCharts(outflows);
+    }
+
+    function renderTable(mTxs, p1, p2) {
+      const tbody = document.getElementById('tx-table-body');
+      const filterOwner = document.getElementById('filter-owner').value;
+      const search = document.getElementById('filter-search').value.toLowerCase();
+
+      const filtered = mTxs
+        .filter(t => {
+          const matchSearch = (t.desc || '').toLowerCase().includes(search) ||
+                              (t.notes || '').toLowerCase().includes(search) ||
+                              (t.category || '').toLowerCase().includes(search);
+          if (!matchSearch) return false;
+          if (filterOwner === 'ALL') return true;
+          if (filterOwner === 'joint') return t.owner === 'joint' || t.owner === 'p1' || t.owner === 'p2';
+          if (filterOwner === 'p1') return t.owner === 'p1' || t.owner === 'p1_ind';
+          if (filterOwner === 'p2') return t.owner === 'p2' || t.owner === 'p2_ind';
+          return true;
+        })
+        .sort((a, b) => (a.day || 1) - (b.day || 1));
+
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500 text-xs">Nenhum lançamento encontrado neste mês na nuvem.</td></tr>`;
+        return;
+      }
+
+      const ownerLabels = {
+        joint: `<span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px]">💑 Casal</span>`,
+        p1: `<span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px]">💑 ${p1} pagou</span>`,
+        p2: `<span class="px-2 py-0.5 rounded bg-pink-500/20 text-pink-300 text-[10px]">💑 ${p2} pagou</span>`,
+        p1_ind: `<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">👤 Só ${p1}</span>`,
+        p2_ind: `<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">👤 Só ${p2}</span>`
+      };
+
+      tbody.innerHTML = filtered.map(t => {
+        const isInc = t.type === 'income';
+        const statusBtn = t.status === 'paid'
+          ? `<button onclick="toggleStatus(${t.id})" class="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25">Pago</button>`
+          : `<button onclick="toggleStatus(${t.id})" class="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-500/15 text-amber-400 hover:bg-amber-500/25">Pend.</button>`;
+
+        const notesHtml = t.notes
+          ? `<div class="text-[11px] text-slate-300/90 italic mt-0.5 bg-slate-800/50 px-2 py-0.5 rounded border-l-2 border-blue-500/60">💬 ${t.notes}</div>`
+          : '';
+
+        return `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="py-2.5 px-1.5 text-xs font-mono text-slate-400">${String(t.day || 1).padStart(2, '0')}</td>
+            <td class="py-2.5 px-1.5">${statusBtn}</td>
+            <td class="py-2.5 px-1.5">
+              <div class="font-medium text-slate-200">${t.desc}</div>
+              ${notesHtml}
+              <div class="text-[10px] text-slate-400 mt-0.5">${t.category} • ${t.method || 'PIX/Débito'}</div>
+            </td>
+            <td class="py-2.5 px-1.5">${ownerLabels[t.owner] || ownerLabels.joint}</td>
+            <td class="py-2.5 px-1.5 text-right font-semibold whitespace-nowrap ${isInc ? 'text-emerald-400' : 'text-slate-200'}">
+              ${isInc ? '+' : '-'} ${formatBRL(t.amount)}
+            </td>
+            <td class="py-2.5 px-1.5 text-center whitespace-nowrap">
+              <button onclick="openEditModal(${t.id})" class="text-slate-400 hover:text-blue-400 px-1.5 py-1 transition" title="Editar lançamento">✏️</button>
+              <button onclick="deleteTransaction(${t.id})" class="text-slate-500 hover:text-rose-400 px-1.5 py-1 transition" title="Excluir">✕</button>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    function renderCharts(outflows) {
+      const ctxCat = document.getElementById('categoryChart').getContext('2d');
+      const grouped = {};
+      outflows.forEach(t => { grouped[t.category] = (grouped[t.category] || 0) + t.amount; });
+
+      if (categoryChartInstance) categoryChartInstance.destroy();
+      const labels = Object.keys(grouped);
+      categoryChartInstance = new Chart(ctxCat, {
+        type: 'doughnut',
+        data: {
+          labels: labels.length ? labels : ['Sem gastos'],
+          datasets: [{
+            data: labels.length ? Object.values(grouped) : [1],
+            backgroundColor: labels.length ? ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#3b82f6', '#8b5cf6'] : ['#1e293b'],
+            borderWidth: 2,
+            borderColor: '#090d16'
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 11 }, boxWidth: 10 } } } }
+      });
+
+      const ctxAnn = document.getElementById('annualChart').getContext('2d');
+      const incArr = [], expArr = [];
+      for (let m = 0; m < 12; m++) {
+        const mk = getMonthKey(currentYear, m);
+        const mTxs = state.transactions.filter(t => t.monthKey === mk);
+        const s1 = state.salariesP1[mk] || 0;
+        const s2 = state.salariesP2[mk] || 0;
+        const ext = mTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+        const out = mTxs.filter(t => t.type !== 'income').reduce((s, t) => s + t.amount, 0);
+        incArr.push(s1 + s2 + ext);
+        expArr.push(out);
+      }
+
+      if (annualChartInstance) annualChartInstance.destroy();
+      annualChartInstance = new Chart(ctxAnn, {
+        type: 'bar',
+        data: {
+          labels: MONTH_SHORT,
+          datasets: [
+            { label: 'Renda Casal', data: incArr, backgroundColor: 'rgba(16, 185, 129, 0.75)', borderRadius: 4 },
+            { label: 'Saídas', data: expArr, backgroundColor: 'rgba(244, 63, 94, 0.75)', borderRadius: 4 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } },
+            y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(51,65,85,0.25)' } }
+          },
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 10 }, boxWidth: 10 } } }
+        }
+      });
+    }
+
+    // Auto-sincronizar sempre que o usuário voltar para o aplicativo no celular ou a cada 30s
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && hasValidCloudConfig()) {
+        pullFromCloud(false);
+      }
+    });
+
+    setInterval(() => {
+      if (document.visibilityState === 'visible' && hasValidCloudConfig()) {
+        pullFromCloud(false);
+      }
+    }, 30000);
+
+    // Inicialização
+    renderAll();
+    if (!hasValidCloudConfig()) {
+      openAuthModal();
+    } else {
+      pullFromCloud(false);
+    }
+  </script>
+</body>
+</html>
