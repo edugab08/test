@@ -136,3 +136,8 @@ input[type=color]{padding:2px!important;height:38px;width:42px;cursor:pointer}
 .yr th{color:#8b97b8;font-weight:600;padding:4px 6px;text-align:right}.yr th:first-child,.yr td:first-child{text-align:left;position:sticky;left:0;background:#070c1c;z-index:1;padding-right:10px;white-space:nowrap}
 .yr td{padding:6px;text-align:right;border-radius:6px;font-variant-numeric:tabular-nums}.yr tr.tot td{font-weight:800;color:#fff}
 .cbar{height:10px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;display:flex}.cbar i{display:block;height:100%}
+
+/* Corrige estouro de largura na tela de Análises (tabela larga empurrava a coluna do grid) */
+.view.active.gv{grid-template-columns:minmax(0,1fr)}
+.gv>*{min-width:0}
+@media(min-width:1024px){.view.active.gv{grid-template-columns:repeat(12,minmax(0,1fr))}}

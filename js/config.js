@@ -27,7 +27,8 @@ const CATEGORIES_LIST = [
   { value: 'Renda Extra', label: 'Renda Extra', color: '#facc15', icon: 'wallet' },
   { value: 'Outros', label: 'Outros', color: '#94a3b8', icon: 'box' }
 ];
-const catMeta = n => CATEGORIES_LIST.find(c => c.value === n) || CATEGORIES_LIST[CATEGORIES_LIST.length - 1];
+const hashColor = n => { let h = 0; for (const ch of String(n)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return ['#f472b6', '#60a5fa', '#34d399', '#fbbf24', '#a78bfa', '#22d3ee', '#fb923c', '#84cc16'][h % 8]; };
+const catMeta = n => CATEGORIES_LIST.find(c => c.value === n) || { value: n, label: n, color: hashColor(n), icon: 'box' };
 const catColor = n => catMeta(n).color;
 
 // Dicionário de Auto-Categorização Inteligente

@@ -10,7 +10,12 @@ function applyCategories() {
   const cf = state.categories || { custom: [], over: {} };
   const list = BASE_CATS.map(c => { const o = (cf.over || {})[c.value] || {}; return { ...c, label: o.label || c.label, color: o.color || c.color }; });
   const outros = list.pop();
+  const known = new Set([...list.map(c => c.value), outros.value, ...(cf.custom || []).map(c => c.value)]), legacy = new Set();
+  const seen = c => { if (c && !known.has(c)) legacy.add(c); };
+  state.transactions.forEach(t => { if (t.type !== 'income') seen(t.category); });
+  (state.recurring || []).forEach(r => seen(r.category)); Object.keys(state.budgets || {}).forEach(seen);
   (cf.custom || []).forEach(c => list.push({ value: c.value, label: c.label, color: c.color, icon: c.icon || 'box', custom: true }));
+  legacy.forEach(n => list.push({ value: n, label: n, color: hashColor(n), icon: 'box', legacy: true }));
   list.push(outros);
   CATEGORIES_LIST.length = 0; list.forEach(c => CATEGORIES_LIST.push(c));
 }
@@ -24,7 +29,9 @@ function renderCatModal() {
   if (!m) { m = document.createElement('div'); m.id = 'cat-modal'; m.className = 'fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 hidden'; m.style.zIndex = 60; document.body.appendChild(m); }
   m.innerHTML = `<div class="glass-card max-w-lg w-full max-h-[90vh] flex flex-col p-5 no-lift"><div class="flex justify-between items-center mb-1"><h2 class="text-lg font-bold text-white">Categorias</h2><button type="button" onclick="$('cat-modal').classList.add('hidden')" class="text-slate-400" aria-label="Fechar">✕</button></div>
     <p class="text-[11px] text-slate-400 mb-3">Mude nome e cor, ou crie as suas. Os lançamentos existentes são mantidos.</p>
-    <div class="overflow-auto flex-1 space-y-2 pr-1">${CATEGORIES_LIST.map(c => `<div class="flex items-center gap-2" data-v="${escapeHtml(c.value)}">
+    ${CATEGORIES_LIST.some(c => c.legacy) ? '<p class="text-[11px] text-amber-300 mb-2">Categorias antigas encontradas nos seus lançamentos. Use “Mesclar em…” para juntá-las a uma categoria atual.</p>' : ''}
+    <div class="overflow-auto flex-1 space-y-2 pr-1">${CATEGORIES_LIST.map(c => c.legacy ? `<div class="flex items-center gap-2" data-v="${escapeHtml(c.value)}"><i class="cdot" style="background:${c.color};margin:0 4px"></i><span class="flex-1 text-sm text-slate-200 truncate">${escapeHtml(c.label)} <span class="text-[10px] text-amber-300">(antiga)</span></span>
+      <select class="px-2 py-2 rounded-lg border text-xs" style="max-width:48%" aria-label="Mesclar em" onchange="mergeCategory(this.closest('[data-v]').dataset.v, this.value)"><option value="">Mesclar em…</option>${CATEGORIES_LIST.filter(x => !x.legacy).map(x => `<option value="${escapeHtml(x.value)}">${escapeHtml(x.label)}</option>`).join('')}</select></div>` : `<div class="flex items-center gap-2" data-v="${escapeHtml(c.value)}">
       <input type="color" value="${c.color}" onchange="saveCat(this)" aria-label="Cor">
       <input value="${escapeHtml(c.label)}" onchange="saveCat(this)" class="flex-1 px-2.5 py-2 rounded-lg border text-sm" aria-label="Nome">
       ${c.custom ? '<button type="button" class="ib" onclick="deleteCategory(this)" aria-label="Excluir categoria">✕</button>' : '<span style="width:28px"></span>'}</div>`).join('')}</div>
@@ -48,6 +55,24 @@ async function addCustomCategory(name, color, icon) {
   if (CATEGORIES_LIST.some(c => c.value.toLowerCase() === name.toLowerCase() || c.label.toLowerCase() === name.toLowerCase())) return toast('Já existe uma categoria com esse nome.');
   await mutateCloudState(s => { s.categories = s.categories || { custom: [], over: {} }; s.categories.custom.push({ value: name, label: name, color, icon }); });
   applyCategories(); renderCatModal(); toast(`Categoria “${escapeHtml(name)}” criada`);
+}
+async function mergeCategory(from, to) {
+  if (!to || to === from) return;
+  const ids = state.transactions.filter(t => t.category === from).map(t => t.id), rids = (state.recurring || []).filter(r => r.category === from).map(r => r.id), bud = (state.budgets || {})[from] || 0;
+  await mutateCloudState(s => {
+    s.transactions.forEach(t => { if (t.category === from) t.category = to; });
+    (s.recurring || []).forEach(r => { if (r.category === from) r.category = to; });
+    if (s.budgets && from in s.budgets) { s.budgets[to] = (s.budgets[to] || 0) + s.budgets[from]; delete s.budgets[from]; }
+  });
+  applyCategories(); renderCatModal();
+  toast(`“${escapeHtml(from)}” mesclada em “${escapeHtml(catLabel(to))}” (${ids.length} lançamentos)`, 'Desfazer', async () => {
+    await mutateCloudState(s => {
+      s.transactions.forEach(t => { if (ids.includes(t.id)) t.category = from; });
+      (s.recurring || []).forEach(r => { if (rids.includes(r.id)) r.category = from; });
+      if (bud) { s.budgets = s.budgets || {}; s.budgets[from] = bud; s.budgets[to] = Math.max(0, (s.budgets[to] || 0) - bud) || undefined; if (s.budgets[to] === undefined) delete s.budgets[to]; }
+    });
+    applyCategories(); renderCatModal();
+  });
 }
 async function deleteCategory(el) {
   const value = el.closest('[data-v]').dataset.v, cu = (state.categories?.custom || []).find(c => c.value === value); if (!cu) return;
@@ -184,6 +209,8 @@ function renderYear() {
 const __renderAll3 = renderAll;
 renderAll = function () {
   applyCategories(); fillCatFilter(); __renderAll3();
+  const lg = CATEGORIES_LIST.filter(c => c.legacy);
+  if (lg.length && !window._legacyToast) { window._legacyToast = 1; toast(`Encontrei categorias antigas (${lg.slice(0, 2).map(c => escapeHtml(c.label)).join(', ')}${lg.length > 2 ? '…' : ''}).`, 'Organizar', openCatModal); }
   try { renderCommitted(); renderYear(); if (!$('cat-modal')?.classList.contains('hidden') && $('cat-modal') && !$('cat-modal').contains(document.activeElement)) renderCatModal(); } catch (e) { console.error(e); }
 };
 renderAll();
