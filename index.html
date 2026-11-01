@@ -20,21 +20,21 @@
   
 <!-- MODAL: AUDITOR IA -->
 <div id="ai-modal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 hidden">
-  <div class="glass-card max-w-lg w-full p-6 space-y-4 border border-fuchsia-500/30">
+  <div class="glass-card max-w-lg w-full p-6 space-y-4 border border-fuchsia-500/30 max-h-[90vh] overflow-y-auto">
     <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
-      <h2 class="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400">🧠 Auditor Financeiro</h2>
+      <h2 class="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400"><span id="ai-title">🧠 Diagnóstico do mês</span></h2>
       <button onclick="document.getElementById('ai-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">✕</button>
     </div>
     
-    <div id="ai-local-diagnosis" class="space-y-2 text-xs text-slate-300 p-3 bg-slate-900/50 rounded-xl border border-slate-800">
-      <!-- O diagnóstico rápido será injetado aqui -->
-    </div>
+    <div id="ai-local-diagnosis" class="text-xs text-slate-300 p-3 bg-slate-900/50 rounded-xl border border-slate-800"></div>
 
-    <div class="pt-2 space-y-2">
-      <p class="text-[11px] text-slate-400">Para uma análise profunda, copie os dados formatados deste mês e cole na sua IA favorita (ChatGPT, Claude ou Gemini):</p>
+    <div class="pt-1 space-y-2.5">
+      <p class="text-[11px] text-slate-400">Quer uma segunda opinião? Copie um resumo do mês e cole no ChatGPT, Claude ou Gemini. O texto vai para uma empresa externa, por isso as descrições dos lançamentos ficam ocultas por padrão.</p>
+      <label class="flex items-start gap-2 text-[11px] text-slate-300 cursor-pointer"><input type="checkbox" id="ai-anon" checked onchange="updateAIText()" class="mt-0.5"> Ocultar descrições (envia só categorias e valores)</label>
       <button onclick="copyPromptForAI()" id="btn-copy-ai" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-fuchsia-300 border border-fuchsia-500/50 rounded-xl font-bold transition flex items-center justify-center gap-2">
-        📄 Copiar Prompt para o ChatGPT/Claude
+        📄 Copiar resumo para uma IA
       </button>
+      <details id="ai-details" class="text-[11px] text-slate-400"><summary class="cursor-pointer">Ver o texto que será copiado</summary><textarea id="ai-text" readonly rows="8" class="w-full mt-2 p-2.5 rounded-xl border text-[11px] font-mono"></textarea></details>
     </div>
   </div>
 </div>
@@ -235,7 +235,7 @@
           <span>🔄 Atualizar</span>
         </button>
         <button onclick="openAIModal()" class="px-3 py-2 text-xs font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white rounded-xl shadow-[0_0_15px_rgba(139,92,246,0.4)] transition flex items-center gap-1.5">
-  🧠 Analisar com IA
+  📊 Diagnóstico do mês
 </button>
 
         <details id="tools" class="relative"><summary class="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-700 text-slate-200 cursor-pointer list-none select-none">⋯ Ferramentas</summary><div class="menu">

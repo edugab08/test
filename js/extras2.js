@@ -221,3 +221,80 @@ renderAll = function () {
   try { renderCommitted(); renderYear(); if (!$('cat-modal')?.classList.contains('hidden') && $('cat-modal') && !$('cat-modal').contains(document.activeElement)) renderCatModal(); } catch (e) { console.error(e); }
 };
 renderAll();
+
+/* ---------- Diagnóstico do mês (antigo "Analisar com IA") ---------- */
+function monthBreakdown(y, m) {
+  const M = monthMetrics(y, m), by = t => sumBy(M.T.filter(x => x.type === t));
+  return { M, income: M.income, fixed: by('expense_fixed'), variable: by('expense_variable'), inv: M.inv };
+}
+const invBy = mk => state.transactions.filter(t => t.type === 'investment' && t.status === 'paid' && t.monthKey === mk).reduce((s, t) => s + t.amount, 0);
+function committedNext(months) {
+  const n = new Date(); let tot = 0;
+  for (let o = 1; o <= months; o++) { const mk = addMonthsToYearMonth(n.getFullYear(), n.getMonth(), o); tot += sumBy(state.transactions.filter(t => t.monthKey === mk && t.type !== 'income' && t.type !== 'investment' && t.status === 'pending')); }
+  return tot;
+}
+function diagnosticItems() {
+  const B = monthBreakdown(currentYear, currentMonth), M = B.M, inc = B.income, items = [], add = (tone, title, text) => items.push({ tone, title, text });
+  if (!(inc > 0)) return [{ tone: 'info', title: 'Sem renda lançada neste mês', text: 'Lance os salários (botão “Salários” na Visão Geral) para ver o diagnóstico completo.' }];
+  const n = new Date(), real = n.getFullYear() === currentYear && n.getMonth() === currentMonth, pct = v => v / inc * 100;
+  const f = pct(B.fixed), v = pct(B.variable), i = pct(B.inv), sp = monthSpent(M.mk);
+  add(f > 50 ? 'bad' : f > 45 ? 'warn' : 'ok', `Fixos: ${f.toFixed(0)}% da renda`, f > 50 ? `Acima da meta de 50% (${formatBRL(B.fixed)}). Revise contas fixas e assinaturas.` : `Dentro da meta de 50% (${formatBRL(B.fixed)}).`);
+  add(v > 30 ? 'bad' : v > 27 ? 'warn' : 'ok', `Variáveis: ${v.toFixed(0)}% da renda`, v > 30 ? `Acima da meta de 30% (${formatBRL(B.variable)}). Veja onde cortar abaixo.` : `Dentro da meta de 30% (${formatBRL(B.variable)}).`);
+  const faltaInv = Math.max(0, inc * 0.2 - B.inv);
+  add(i >= 20 ? 'ok' : (real && n.getDate() < 20) ? 'info' : i >= 10 ? 'warn' : 'bad', `Investido: ${i.toFixed(0)}% da renda`, i >= 20 ? 'Meta de 20% atingida.' : `Faltam ${formatBRL(faltaInv)} para chegar aos 20%${real && n.getDate() < 20 ? ' (ainda dá tempo neste mês)' : ''}.`);
+  const bud = state.budgets || {}, over = [], near = [];
+  expCats().forEach(c => { const l = bud[c.value]; if (!l) return; const s = sp[c.value] || 0; if (s > l) over.push(`${catLabel(c.value)} (+${formatBRL(s - l)})`); else if (s / l >= 0.8) near.push(`${catLabel(c.value)} (${(s / l * 100).toFixed(0)}%)`); });
+  if (over.length) add('bad', 'Orçamento estourado', over.slice(0, 4).join(', '));
+  if (near.length) add('warn', 'Perto do limite do orçamento', near.slice(0, 4).join(', '));
+  if (!Object.keys(bud).length) add('info', 'Sem orçamento por categoria', 'Defina limites na aba Orçamento (há o botão “Sugerir limites”).');
+  const pg = monthSpent(addMonthsToYearMonth(currentYear, currentMonth, -1));
+  if (Object.keys(pg).length) {
+    const ups = Object.keys(sp).map(c => ({ c, d: sp[c] - (pg[c] || 0), p: pg[c] ? (sp[c] - pg[c]) / pg[c] * 100 : null })).filter(x => x.d >= 50 && (x.p === null || x.p >= 10)).sort((a, b) => b.d - a.d).slice(0, 3);
+    if (ups.length) add('warn', 'O que mais subiu em relação ao mês anterior', ups.map(x => `${catLabel(x.c)} +${formatBRL(x.d)}${x.p === null ? ' (novo)' : ` (+${x.p.toFixed(0)}%)`}`).join(', '));
+  }
+  const vs = {}; M.T.filter(t => t.type === 'expense_variable').forEach(t => { vs[t.category] = (vs[t.category] || 0) + t.amount; });
+  const top = Object.keys(vs).sort((a, b) => vs[b] - vs[a])[0];
+  if (top) add('info', 'Maior gasto variável', `${catLabel(top)}: ${formatBRL(vs[top])}.`);
+  if (real) {
+    const left = new Date(currentYear, currentMonth + 1, 0).getDate() - n.getDate(), daily = sumBy(M.T.filter(t => t.type === 'expense_variable' && t.status === 'paid')) / n.getDate(), fc = M.total - daily * left;
+    add(fc < 0 ? 'bad' : 'info', 'Previsão para o fim do mês', `Saldo previsto: ${formatBRL(fc)}, se os gastos variáveis seguirem em ${formatBRL(daily)} por dia nos próximos ${left} dias.`);
+  }
+  const com = committedNext(3); if (com > 0) add('info', 'Já comprometido nos próximos 3 meses', `${formatBRL(com)} em contas e parcelas pendentes.`);
+  const W = state.wallets || [], totalW = W.reduce((s, w) => s + walletBal(w), 0) + unallocated(), avg = [0, -1, -2].reduce((s, k) => s + invBy(addMonthsToYearMonth(n.getFullYear(), n.getMonth(), k)), 0) / 3;
+  (state.goals || []).slice(0, 3).forEach(g => {
+    const w = W.find(x => x.id === g.walletId), cur = w ? walletBal(w) : totalW, [dy, dm] = (g.deadline || '').split('-').map(Number), left = dy ? Math.max(1, dy * 12 + dm - (n.getFullYear() * 12 + n.getMonth() + 1)) : 1, need = Math.max(0, g.target - cur) / left;
+    if (cur >= g.target) add('ok', `Meta “${g.name}”`, 'Atingida!');
+    else add(avg >= need ? 'ok' : 'warn', `Meta “${g.name}”: ${(cur / g.target * 100).toFixed(0)}%`, `Precisa de ${formatBRL(need)} por mês; seu aporte médio é ${formatBRL(avg)}.`);
+  });
+  return items;
+}
+function renderDiagnosis() {
+  const B = monthBreakdown(currentYear, currentMonth), M = B.M, rank = { bad: 0, warn: 1, info: 2, ok: 3 }, T = { bad: ['#fb7185', 'warn'], warn: ['#fbbf24', 'warn'], info: ['#22d3ee', 'bulb'], ok: ['#34d399', 'check'] };
+  const items = diagnosticItems().sort((a, b) => rank[a.tone] - rank[b.tone]);
+  return `<div class="flex justify-between gap-2 pb-2 mb-1 border-b border-slate-800/70 text-[11px]"><span class="text-slate-400">Renda <b class="text-white">${formatBRL(B.income)}</b></span><span class="text-slate-400">Saídas <b class="text-white">${formatBRL(M.exp)}</b></span><span class="text-slate-400">Sobrou <b style="color:${M.net >= 0 ? '#34d399' : '#fb7185'}">${formatBRL(M.net)}</b></span></div>` +
+    items.map(it => `<div class="flex gap-2.5 py-2 border-b border-slate-800/60 last:border-0"><span style="color:${T[it.tone][0]};flex:none;margin-top:1px">${svgIcon(T[it.tone][1], 16)}</span><div class="min-w-0"><div class="font-semibold text-slate-100">${escapeHtml(it.title)}</div><div class="text-slate-400 text-[11px] leading-snug mt-0.5">${escapeHtml(it.text)}</div></div></div>`).join('');
+}
+function buildAIPrompt(anon) {
+  const B = monthBreakdown(currentYear, currentMonth), M = B.M, inc = B.income, p = v => inc > 0 ? (v / inc * 100).toFixed(0) + '%' : '—';
+  const sp = monthSpent(M.mk), pg = monthSpent(addMonthsToYearMonth(currentYear, currentMonth, -1)), bud = state.budgets || {}, L = [];
+  L.push('Você é um consultor financeiro para casais: direto, respeitoso e prático. Responda em português do Brasil, com valores em reais.', '');
+  L.push(`Mês analisado: ${MONTH_NAMES[currentMonth]}/${currentYear}`, `Renda do casal: ${_fmt0(inc)}`, `Fixos: ${_fmt0(B.fixed)} (${p(B.fixed)}) | Variáveis: ${_fmt0(B.variable)} (${p(B.variable)}) | Investido: ${_fmt0(B.inv)} (${p(B.inv)}) | Sobrou: ${_fmt0(M.net)}`, 'Meta do casal: regra 50-30-20 (50% fixos, 30% variáveis, 20% investimentos).', '', 'Gastos por categoria:');
+  Object.keys(sp).sort((a, b) => sp[b] - sp[a]).forEach(c => L.push(`- ${catLabel(c)}: ${_fmt0(sp[c])} (${p(sp[c])} da renda)${pg[c] ? `, mês anterior ${_fmt0(pg[c])}` : ''}${bud[c] ? `, limite ${_fmt0(bud[c])}` : ''}`));
+  L.push('', 'Maiores gastos individuais:');
+  M.out.filter(t => t.type !== 'investment').sort((a, b) => b.amount - a.amount).slice(0, 10).forEach(t => L.push(`- ${anon ? '(descrição oculta)' : t.desc} | ${catLabel(t.category)} | ${_fmt0(t.amount)}`));
+  const com = committedNext(3); if (com > 0) L.push('', `Já comprometido nos próximos 3 meses (contas e parcelas pendentes): ${_fmt0(com)}`);
+  (state.goals || []).slice(0, 3).forEach((g, k) => L.push(k ? '' : '', `Meta ${anon ? k + 1 : '“' + g.name + '”'}: alvo ${_fmt0(g.target)} até ${g.deadline || 'sem prazo'}`));
+  L.push('', 'Responda em tópicos curtos:', '1. Quais são os 2 ou 3 principais riscos deste mês?', '2. Onde cortar, com valores sugeridos por categoria.', '3. Um plano prático para o próximo mês.', '4. Um ponto positivo que eles devem manter.');
+  return L.join('\n');
+}
+function updateAIText() { $('ai-text').value = buildAIPrompt($('ai-anon').checked); }
+function openAIModal() {
+  $('ai-title').textContent = `Diagnóstico de ${MONTH_NAMES[currentMonth]}`;
+  $('ai-local-diagnosis').innerHTML = renderDiagnosis(); updateAIText(); $('ai-modal').classList.remove('hidden');
+}
+async function copyPromptForAI() {
+  const text = buildAIPrompt($('ai-anon').checked); let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; } catch (e) { try { updateAIText(); $('ai-text').select(); ok = document.execCommand('copy'); } catch (e2) {} }
+  if (!ok) $('ai-details').open = true;
+  toast(ok ? 'Resumo copiado. Cole na IA que preferir.' : 'Não consegui copiar sozinho: abri o texto, é só selecionar e copiar.');
+}
