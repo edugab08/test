@@ -1,0 +1,12 @@
+{
+  "name": "financas-a-dois",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i src/input.css -o css/tailwind.css --minify",
+    "test": "node tests/server.test.js && node tests/smoke.js && node tests/smoke.js --v2"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.17",
+    "jsdom": "^25.0.0"
+  }
+}
