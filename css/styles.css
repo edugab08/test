@@ -141,3 +141,4 @@ input[type=color]{padding:2px!important;height:38px;width:42px;cursor:pointer}
 .view.active.gv{grid-template-columns:minmax(0,1fr)}
 .gv>*{min-width:0}
 @media(min-width:1024px){.view.active.gv{grid-template-columns:repeat(12,minmax(0,1fr))}}
+input[type=color]{flex:none}

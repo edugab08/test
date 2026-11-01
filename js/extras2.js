@@ -24,20 +24,27 @@ function fillCatFilter() {
   el.innerHTML = '<option value="">Todas as categorias</option>' + CATEGORIES_LIST.map(c => `<option value="${escapeHtml(c.value)}">${escapeHtml(c.label)}</option>`).join('');
   el.value = CATEGORIES_LIST.some(c => c.value === v) ? v : '';
 }
+const ICON_PT = { home: 'Casa', cart: 'Mercado', utensils: 'Comida', car: 'Carro', pill: 'Saúde', shirt: 'Roupa', book: 'Estudo', film: 'Filmes', gamepad: 'Jogos', paw: 'Pet', box: 'Outros', trend: 'Investir', wallet: 'Carteira', bulb: 'Ideia', bolt: 'Energia', target: 'Meta' };
 function renderCatModal() {
   let m = $('cat-modal');
   if (!m) { m = document.createElement('div'); m.id = 'cat-modal'; m.className = 'fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 hidden'; m.style.zIndex = 60; document.body.appendChild(m); }
+  const legacy = CATEGORIES_LIST.filter(c => c.legacy), normal = CATEGORIES_LIST.filter(c => !c.legacy);
+  const count = v => state.transactions.filter(t => t.category === v).length;
+  const mergeOpts = normal.map(x => `<option value="${escapeHtml(x.value)}">${escapeHtml(x.label)}</option>`).join('');
   m.innerHTML = `<div class="glass-card max-w-lg w-full max-h-[90vh] flex flex-col p-5 no-lift"><div class="flex justify-between items-center mb-1"><h2 class="text-lg font-bold text-white">Categorias</h2><button type="button" onclick="$('cat-modal').classList.add('hidden')" class="text-slate-400" aria-label="Fechar">✕</button></div>
-    <p class="text-[11px] text-slate-400 mb-3">Mude nome e cor, ou crie as suas. Os lançamentos existentes são mantidos.</p>
-    ${CATEGORIES_LIST.some(c => c.legacy) ? '<p class="text-[11px] text-amber-300 mb-2">Categorias antigas encontradas nos seus lançamentos. Use “Mesclar em…” para juntá-las a uma categoria atual.</p>' : ''}
-    <div class="overflow-auto flex-1 space-y-2 pr-1">${CATEGORIES_LIST.map(c => c.legacy ? `<div class="flex items-center gap-2" data-v="${escapeHtml(c.value)}"><i class="cdot" style="background:${c.color};margin:0 4px"></i><span class="flex-1 text-sm text-slate-200 truncate">${escapeHtml(c.label)} <span class="text-[10px] text-amber-300">(antiga)</span></span>
-      <select class="px-2 py-2 rounded-lg border text-xs" style="max-width:48%" aria-label="Mesclar em" onchange="mergeCategory(this.closest('[data-v]').dataset.v, this.value)"><option value="">Mesclar em…</option>${CATEGORIES_LIST.filter(x => !x.legacy).map(x => `<option value="${escapeHtml(x.value)}">${escapeHtml(x.label)}</option>`).join('')}</select></div>` : `<div class="flex items-center gap-2" data-v="${escapeHtml(c.value)}">
+    <div class="overflow-y-auto flex-1 min-h-0 pr-1">
+    ${legacy.length ? `<div class="mb-4"><p class="text-[11px] text-amber-300 mb-2">Categorias antigas encontradas nos seus lançamentos. Escolha em qual categoria atual juntar cada uma:</p><div class="space-y-2">${legacy.map(c => `<div class="rounded-xl p-3" style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25)" data-v="${escapeHtml(c.value)}">
+      <div class="flex items-center gap-2 mb-2"><i class="cdot" style="background:${c.color};margin:0"></i><span class="text-sm text-slate-100 font-semibold break-words min-w-0">${escapeHtml(c.label)}</span><span class="text-[10px] text-slate-400 ml-auto whitespace-nowrap">${count(c.value)} lançamento${count(c.value) === 1 ? '' : 's'}</span></div>
+      <select class="w-full px-2.5 py-2 rounded-lg border text-xs" aria-label="Mesclar ${escapeHtml(c.label)} em" onchange="mergeCategory(this.closest('[data-v]').dataset.v, this.value)"><option value="">Mesclar em…</option>${mergeOpts}</select></div>`).join('')}</div></div>` : ''}
+    <p class="text-[11px] text-slate-400 mb-2">Mude nome e cor, ou crie as suas. Os lançamentos existentes são mantidos.</p>
+    <div class="space-y-2">${normal.map(c => `<div class="flex items-center gap-2" data-v="${escapeHtml(c.value)}">
       <input type="color" value="${c.color}" onchange="saveCat(this)" aria-label="Cor">
-      <input value="${escapeHtml(c.label)}" onchange="saveCat(this)" class="flex-1 px-2.5 py-2 rounded-lg border text-sm" aria-label="Nome">
-      ${c.custom ? '<button type="button" class="ib" onclick="deleteCategory(this)" aria-label="Excluir categoria">✕</button>' : '<span style="width:28px"></span>'}</div>`).join('')}</div>
-    <div class="flex items-center gap-2 mt-4 pt-3 border-t border-slate-800"><input id="nc-color" type="color" value="${CAT_PALETTE[CATEGORIES_LIST.length % 8]}" aria-label="Cor da nova categoria">
-      <input id="nc-name" placeholder="Nova categoria" class="flex-1 px-2.5 py-2 rounded-lg border text-sm"><select id="nc-icon" class="px-2 py-2 rounded-lg border text-xs" aria-label="Ícone">${CAT_ICONS.map(i => `<option>${i}</option>`).join('')}</select>
-      <button type="button" class="settle-btn" style="margin:0" onclick="addCustomCategory($('nc-name').value,$('nc-color').value,$('nc-icon').value)">Adicionar</button></div></div>`;
+      <input value="${escapeHtml(c.label)}" onchange="saveCat(this)" class="flex-1 min-w-0 px-2.5 py-2 rounded-lg border text-sm" aria-label="Nome">
+      ${c.custom ? '<button type="button" class="ib" onclick="deleteCategory(this)" aria-label="Excluir categoria">✕</button>' : '<span style="width:28px;flex:none"></span>'}</div>`).join('')}</div></div>
+    <div class="mt-3 pt-3 border-t border-slate-800 space-y-2"><div class="text-[11px] text-slate-400">Nova categoria</div>
+      <div class="flex items-center gap-2"><input id="nc-color" type="color" value="${CAT_PALETTE[CATEGORIES_LIST.length % 8]}" aria-label="Cor da nova categoria"><input id="nc-name" placeholder="Nome (ex: Pets Vet)" class="flex-1 min-w-0 px-2.5 py-2 rounded-lg border text-sm"></div>
+      <div class="flex items-center gap-2"><select id="nc-icon" class="flex-1 min-w-0 px-2.5 py-2 rounded-lg border text-xs" aria-label="Ícone">${CAT_ICONS.map(i => `<option value="${i}">Ícone: ${ICON_PT[i]}</option>`).join('')}</select>
+      <button type="button" class="settle-btn" style="margin:0;padding:10px 20px;font-size:12px;flex:none" onclick="addCustomCategory($('nc-name').value,$('nc-color').value,$('nc-icon').value)">Adicionar</button></div></div></div>`;
 }
 function openCatModal() { renderCatModal(); $('cat-modal').classList.remove('hidden'); }
 async function saveCat(el) {
