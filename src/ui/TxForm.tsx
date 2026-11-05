@@ -96,7 +96,7 @@ export function TxForm({ tx, onDone, presetKind }: { tx?: Tx; onDone: () => void
       txs.forEach(t => (t.wallet_id = f.kind === 'investment' ? f.wallet_id || null : null));
       if (f.repeat && txs.length === 1) {
         const t = txs[0];
-        const r: Recurring = { id: uuid(), household_id: H, description: t.description, amount: t.amount, kind: t.kind, nature: t.nature, category_id: t.category_id, method: t.method, card_id: t.card_id, wallet_id: t.wallet_id, day: Number(f.date.slice(8)), payer_id: t.payer_id, shared: t.shared, start_month: t.month, end_month: null, skipped: [], created_by: me.id };
+        const r: Recurring = { id: uuid(), household_id: H, description: t.description, amount: t.amount, kind: t.kind, nature: t.nature, category_id: t.category_id, method: t.method, card_id: t.card_id, wallet_id: t.wallet_id, day: Number(f.date.slice(8)), payer_id: t.payer_id, shared: t.shared, start_month: monthStart(t.occurred_on), end_month: null, skipped: [], created_by: me.id };
         save('recurring', r as unknown as Record<string, unknown>);
         t.recurring_id = r.id;
       }
@@ -122,8 +122,9 @@ export function TxForm({ tx, onDone, presetKind }: { tx?: Tx; onDone: () => void
       toast(`${all.length} parcelas excluídas`, { label: 'Desfazer', run: () => save('transactions', ...(all as unknown as Record<string, unknown>[])) });
     } else if (scope === 'stop' && tx.recurring_id) {
       const r = s.data.recurring.find(x => x.id === tx.recurring_id);
-      const future = s.data.transactions.filter(t => t.recurring_id === tx.recurring_id && t.month >= tx.month && !t.paid);
-      if (r) save('recurring', { ...r, end_month: addMonths(tx.month, -1) } as unknown as Record<string, unknown>);
+      const chargeMonth = monthStart(tx.occurred_on);
+      const future = s.data.transactions.filter(t => t.recurring_id === tx.recurring_id && t.occurred_on >= chargeMonth && !t.paid);
+      if (r) save('recurring', { ...r, end_month: addMonths(chargeMonth, -1) } as unknown as Record<string, unknown>);
       del('transactions', ...future);
       toast(`${t0(tx.description)} não se repete mais`);
     } else {

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import type { Recurring, Tx } from '../domain/types';
 import { Savings } from './Savings';
 import { categoryAverages } from '../domain/metrics';
-import { addMonths, monthLabel, thisMonth } from '../domain/dates';
+import { addMonths, dateIn, monthLabel, monthStart, thisMonth } from '../domain/dates';
+import { invoiceMonth } from '../domain/cards';
 import { fmt, parseAmount, sum } from '../domain/money';
 import { del, getState, meOf, save, toast, useStore } from '../data/store';
 import { Money, Section, Seg, Sheet } from '../ui/kit';
@@ -124,14 +125,18 @@ export function RecurringSheet({ r, onClose }: { r: Recurring | null; onClose: (
     const next = { ...r, description: f.description.trim() || r.description, amount, day };
     save('recurring', next as unknown as Record<string, unknown>);
     // atualiza também os meses já gerados que ainda não foram pagos (a partir deste mês)
-    const gen = s.data.transactions.filter(t => t.recurring_id === r.id && t.month >= m0 && !t.paid);
-    if (gen.length) save('transactions', ...gen.map(t => ({ ...t, description: next.description, amount, occurred_on: `${t.month.slice(0, 8)}${String(Math.min(day, 28)).padStart(2, '0')}` } as unknown as Record<string, unknown>)));
+    const gen = s.data.transactions.filter(t => t.recurring_id === r.id && t.occurred_on >= m0 && !t.paid);
+    const card = s.data.cards.find(c => c.id === r.card_id && r.method === 'card');
+    if (gen.length) save('transactions', ...gen.map(t => {
+      const occurred_on = dateIn(monthStart(t.occurred_on), day);
+      return { ...t, description: next.description, amount, occurred_on, month: card ? invoiceMonth(card, occurred_on) : t.month } as unknown as Record<string, unknown>;
+    }));
     toast(`${next.description} atualizado de ${monthLabel(m0)} em diante`); onClose();
   };
   const stop = () => {
     const s = getState();
     save('recurring', { ...r, end_month: addMonths(m0, -1) } as unknown as Record<string, unknown>);
-    del('transactions', ...s.data.transactions.filter(t => t.recurring_id === r.id && t.month >= m0 && !t.paid));
+    del('transactions', ...s.data.transactions.filter(t => t.recurring_id === r.id && t.occurred_on >= m0 && !t.paid));
     toast(`${r.description} não se repete mais`, { label: 'Desfazer', run: () => save('recurring', r as unknown as Record<string, unknown>) });
     onClose();
   };

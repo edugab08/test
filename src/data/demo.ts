@@ -107,10 +107,12 @@ export class DemoBackend implements Backend {
   async ensureRecurring(months: string[]) {
     let n = 0;
     for (const r of this.data.recurring) for (const m of months) {
-      if (r.start_month > m || (r.end_month && r.end_month < m) || r.skipped.includes(m)) continue;
-      if (this.data.transactions.some(t => t.recurring_id === r.id && t.month === m)) continue;
+      const card = r.method === 'card' ? this.data.cards.find(c => c.id === r.card_id) : null;
+      const occ = dateIn(m, r.day), inv = card ? invoiceMonth(card, occ) : m;
+      if (r.start_month > m || (r.end_month && r.end_month < m) || r.skipped.includes(inv)) continue;
+      if (this.data.transactions.some(t => t.recurring_id === r.id && t.month === inv)) continue;
       n++;
-      this.data.transactions.push({ id: uuid(), household_id: H, description: r.description, notes: '', amount: r.amount, kind: r.kind, nature: r.nature, category_id: r.category_id, method: r.method, card_id: r.card_id, wallet_id: r.wallet_id, occurred_on: dateIn(m, r.day), month: m, paid: m < thisMonth(), payer_id: r.payer_id, shared: r.shared, installment_group: null, installment_no: null, installment_total: null, recurring_id: r.id, created_by: r.created_by });
+      this.data.transactions.push({ id: uuid(), household_id: H, description: r.description, notes: '', amount: r.amount, kind: r.kind, nature: r.nature, category_id: r.category_id, method: r.method, card_id: r.card_id, wallet_id: r.wallet_id, occurred_on: occ, month: inv, paid: inv < thisMonth(), payer_id: r.payer_id, shared: r.shared, installment_group: null, installment_no: null, installment_total: null, recurring_id: r.id, created_by: r.created_by });
     }
     this.save();
     return n;
