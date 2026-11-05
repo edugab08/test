@@ -125,3 +125,13 @@ export function weekSummary(data: Data, todayIso: string) {
   const biggest = [...thisW].sort((x, y) => y.amount - x.amount)[0] ?? null;
   return { total, prev, diff: round2(total - prev), pct: prev > 0 ? ((total - prev) / prev) * 100 : null, count: thisW.length, perDay: round2(total / 7), topChange: changes[0] ?? null, biggest };
 }
+
+/**
+ * Lançamentos que aparecem na lista de um mês: compras no cartão aparecem no mês em que foram feitas
+ * (a 1ª parcela; as seguintes, no mês da fatura). O resto, no mês em que conta.
+ * As contas do mês (sobra, orçamento) continuam pelo mês da fatura, que é quando o dinheiro sai.
+ */
+export function inMonthList(t: Tx, month: string): boolean {
+  if (t.method === 'card' && t.kind !== 'income' && (t.installment_no ?? 1) === 1) return t.occurred_on.slice(0, 7) === month.slice(0, 7);
+  return t.month === month;
+}

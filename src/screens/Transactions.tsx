@@ -3,6 +3,7 @@ import type { Tx } from '../domain/types';
 import { dayLabel, monthLabel } from '../domain/dates';
 import { sum } from '../domain/money';
 import { norm } from '../domain/categorize';
+import { inMonthList } from '../domain/metrics';
 import { meOf, partnerOf, useStore } from '../data/store';
 import { Empty, Money } from '../ui/kit';
 import { Icon } from '../ui/Icon';
@@ -23,7 +24,7 @@ export function Transactions({ onOpen }: { onOpen: (t: Tx) => void }) {
     const nq = norm(q.trim());
     return data.transactions.filter(t => {
       // com busca, procura em todos os meses; sem busca, só no mês aberto
-      if (!nq && t.month !== month) return false;
+      if (!nq && !inMonthList(t, month)) return false;
       if (nq) {
         const c = data.categories.find(x => x.id === t.category_id)?.name ?? '';
         if (!norm(`${t.description} ${t.notes} ${c}`).includes(nq) && !String(t.amount).includes(nq.replace(',', '.'))) return false;

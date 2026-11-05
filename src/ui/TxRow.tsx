@@ -3,6 +3,7 @@ import { Icon } from './Icon';
 import { Money } from './kit';
 import { save } from '../data/store';
 import { catColor, memberColor, tint } from './theme';
+import { monthShortLabel } from '../domain/dates';
 
 const METHOD: Record<string, string> = { pix: 'Pix', card: 'Cartão', boleto: 'Boleto', cash: 'Dinheiro' };
 
@@ -33,7 +34,7 @@ export function TxRow({ t, data, onOpen, meId }: { t: Tx; data: Data; onOpen: (t
       <div className="flex flex-col items-end gap-1">
         <Money v={isIn ? t.amount : -t.amount} className={`text-[15px] font-semibold ${isIn ? 'text-mint' : t.kind === 'investment' ? 'text-sky' : ''}`} sign />
         {(t.method === 'card' && !isIn) || locked
-          ? <span className="text-[11px] text-mist-3">{locked ? (t.paid ? 'recebido' : 'a receber') : t.paid ? 'fatura paga' : 'na fatura'}</span>
+          ? <span className="text-[11px] text-mist-3">{locked ? (t.paid ? 'recebido' : 'a receber') : t.paid ? 'fatura paga' : `fatura ${monthShortLabel(t.month).split('/')[0].toLowerCase()}`}</span>
           : <button onClick={() => save('transactions', { ...t, paid: !t.paid } as unknown as Record<string, unknown>)} className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${t.paid ? 'bg-mint/10 text-mint' : 'bg-amber/10 text-amber'}`} aria-label={t.paid ? 'Marcar como pendente' : 'Marcar como pago'}>
             {t.paid ? (isIn ? 'recebido' : 'pago') : 'pendente'}
           </button>}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Card, Tx } from '../domain/types';
-import { cardInvoice, cardUsed } from '../domain/cards';
-import { addMonths, dateIn, monthLabel } from '../domain/dates';
+import { cardInvoice, cardUsed, invoiceInfo, invoiceMonth } from '../domain/cards';
+import { addMonths, dateIn, monthLabel, thisMonth, today } from '../domain/dates';
 import { fmt, parseAmount, round2, sum } from '../domain/money';
 import { uuid } from '../domain/build';
 import { del, getState, meOf, save, toast, useStore } from '../data/store';
@@ -11,56 +11,85 @@ import { TxRow } from '../ui/TxRow';
 import { memberColor } from '../ui/theme';
 
 export function Cards({ onOpen }: { onOpen: (t: Tx) => void }) {
-  const data = useStore(s => s.data), month = useStore(s => s.month), me = useStore(meOf)!;
+  const data = useStore(s => s.data);
   const [edit, setEdit] = useState<Card | 'new' | null>(null);
-  const [open, setOpen] = useState<string | null>(null);
   const cards = data.cards.filter(c => !c.archived);
-
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       {cards.length === 0 && <div className="panel"><Empty icon="card" title="Nenhum cartão ainda">Cadastre o cartão com o dia de fechamento: o app coloca cada compra na fatura certa sozinho.</Empty></div>}
-      {cards.map(c => {
-        const inv = cardInvoice(data.transactions, c.id, month);
-        const total = sum(inv, t => t.amount), unpaid = sum(inv.filter(t => !t.paid), t => t.amount);
-        const used = cardUsed(data.transactions, c.id), pct = c.limit_amount ? Math.min(100, (used / c.limit_amount) * 100) : 0;
-        const next = sum(cardInvoice(data.transactions, c.id, addMonths(month, 1)), t => t.amount);
-        const holder = data.members.find(m => m.id === c.holder_id);
-        const expanded = open === c.id;
-        return (
-          <section key={c.id} className="panel overflow-hidden">
-            <div className="relative p-5" style={{ background: `linear-gradient(120deg, color-mix(in srgb, ${memberColor(holder, data.members)} 16%, transparent), transparent 60%)` }}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-display text-lg font-semibold">{c.name}</p>
-                  <p className="mt-0.5 text-[12px] text-mist-2">Fecha dia {c.closing_day}, vence dia {c.due_day}{holder ? ` · de ${holder.id === me.id ? 'você' : holder.display_name}` : ''}</p>
-                </div>
-                <button className="rounded-full p-2 text-mist-2 hover:bg-white/5" onClick={() => setEdit(c)} aria-label={`Editar ${c.name}`}><Icon name="edit" size={16} /></button>
-              </div>
-              <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
-                <div><p className="mb-1 text-[12px] text-mist-2">Fatura de {monthLabel(month)}</p><Money v={total} className="block text-3xl font-bold" /></div>
-                {unpaid > 0
-                  ? <button className="btn-primary" onClick={() => { const ids = inv.filter(t => !t.paid); save('transactions', ...ids.map(t => ({ ...t, paid: true } as unknown as Record<string, unknown>))); toast(`Fatura ${c.name} paga`, { label: 'Desfazer', run: () => save('transactions', ...(ids as unknown as Record<string, unknown>[])) }); }}>Pagar fatura · {fmt(unpaid)}</button>
-                  : total > 0 ? <span className="chip text-mint"><Icon name="check" size={14} />Paga</span> : null}
-              </div>
-              <div className="mt-5">
-                <div className="mb-1.5 flex justify-between text-[12px]"><span className="text-mist-2">Limite usado <Money v={used} className="text-mist-1" /></span><span className="text-mist-2">Livre <Money v={Math.max(0, c.limit_amount - used)} className="text-mint" /></span></div>
-                <div className="h-2 overflow-hidden rounded-full bg-white/5"><div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: pct > 85 ? 'rgb(var(--c-coral))' : 'linear-gradient(90deg, var(--me), var(--duo))' }} /></div>
-                {next > 0 && <p className="mt-2 text-[12px] text-mist-3">Próxima fatura já tem <Money v={next} className="text-mist-2" /> lançados.</p>}
-              </div>
-            </div>
-            <button className="flex w-full items-center justify-between border-t border-white/5 px-5 py-3 text-sm text-mist-2 hover:bg-white/[.03]" onClick={() => setOpen(expanded ? null : c.id)} aria-expanded={expanded}>
-              <span>{inv.length} compra{inv.length === 1 ? '' : 's'} nesta fatura</span><Icon name="down" size={16} className={`transition ${expanded ? 'rotate-180' : ''}`} />
-            </button>
-            {expanded && <ul className="px-2 pb-2 sm:px-3">{inv.sort((a, b) => b.occurred_on.localeCompare(a.occurred_on)).map(t => <TxRow key={t.id} t={t} data={data} onOpen={onOpen} meId={me.id} />)}</ul>}
-          </section>
-        );
-      })}
+      {cards.map(c => <CardPanel key={c.id} c={c} onOpen={onOpen} onEdit={() => setEdit(c)} />)}
       <button className="btn-ghost w-full py-3" onClick={() => setEdit('new')}><Icon name="plus" size={16} />Adicionar cartão</button>
       <InvoiceHistory />
       <CardSheet card={edit} onClose={() => setEdit(null)} />
     </div>
   );
 }
+
+const ddmm = (d: string) => `${d.slice(8)}/${d.slice(5, 7)}`;
+const STATUS = { aberta: 'Aberta', fechada: 'Fechada', futura: 'Próxima' } as const;
+
+function CardPanel({ c, onOpen, onEdit }: { c: Card; onOpen: (t: Tx) => void; onEdit: () => void }) {
+  const data = useStore(s => s.data), month = useStore(s => s.month), me = useStore(meOf)!;
+  const t0 = today();
+  const openInv = invoiceMonth(c, t0);
+  // no mês atual, abre na fatura aberta (onde caem as compras de hoje); em outros meses, na que vence naquele mês
+  const base = month === thisMonth() ? openInv : month;
+  const [sel, setSel] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(true);
+  const [lastBase, setLastBase] = useState(base);
+  if (lastBase !== base) { setLastBase(base); setSel(null); }
+  const cur = sel ?? base;
+
+  const options = [-1, 0, 1].map(n => addMonths(base, n))
+    .filter(m => m === base || m === cur || cardInvoice(data.transactions, c.id, m).length > 0);
+  const inv = cardInvoice(data.transactions, c.id, cur).sort((a, b) => b.occurred_on.localeCompare(a.occurred_on));
+  const total = sum(inv, t => t.amount), unpaid = sum(inv.filter(t => !t.paid), t => t.amount);
+  const info = invoiceInfo(c, cur, t0);
+  const used = cardUsed(data.transactions, c.id), pct = c.limit_amount ? Math.min(100, (used / c.limit_amount) * 100) : 0;
+  const holder = data.members.find(m => m.id === c.holder_id);
+  const label = (m: string) => { const i = invoiceInfo(c, m, t0); return `${STATUS[i.status]} · vence ${ddmm(i.due)}`; };
+
+  return (
+    <section className="panel overflow-hidden">
+      <div className="relative p-5" style={{ background: `linear-gradient(120deg, color-mix(in srgb, ${memberColor(holder, data.members)} 16%, transparent), transparent 60%)` }}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-display text-lg font-semibold">{c.name}</p>
+            <p className="mt-0.5 text-[12px] text-mist-2">Fecha dia {c.closing_day}, vence dia {c.due_day}{holder ? ` · de ${holder.id === me.id ? 'você' : holder.display_name}` : ''}</p>
+          </div>
+          <button className="rounded-full p-2 text-mist-2 hover:bg-white/5" onClick={onEdit} aria-label={`Editar ${c.name}`}><Icon name="edit" size={16} /></button>
+        </div>
+
+        {options.length > 1 && (
+          <div className="scroll-x -mx-1 mt-4 flex gap-2 px-1" role="group" aria-label="Escolher fatura">
+            {options.map(m => <button key={m} className="chip shrink-0" aria-pressed={m === cur} onClick={() => setSel(m)}>{label(m)}</button>)}
+          </div>
+        )}
+
+        <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="mb-1 text-[12px] text-mist-2">Fatura {info.status === 'aberta' ? 'aberta' : info.status === 'fechada' ? 'fechada' : 'seguinte'} · vence {ddmm(info.due)}</p>
+            <Money v={total} className="block text-3xl font-bold" />
+            <p className="mt-1 text-[12px] text-mist-3">{info.status === 'aberta' ? `Compras até ${ddmm(addDays(info.closing, -1))} entram aqui. Fecha em ${ddmm(info.closing)}.` : info.status === 'fechada' ? `Fechou em ${ddmm(info.closing)}.` : `Parcelas de compras anteriores já caem aqui. Fecha em ${ddmm(info.closing)}.`}</p>
+          </div>
+          {unpaid > 0 && info.status === 'fechada'
+            ? <button className="btn-primary" onClick={() => { const ids = inv.filter(t => !t.paid); save('transactions', ...ids.map(t => ({ ...t, paid: true } as unknown as Record<string, unknown>))); toast(`Fatura ${c.name} paga`, { label: 'Desfazer', run: () => save('transactions', ...(ids as unknown as Record<string, unknown>[])) }); }}>Pagar fatura · {fmt(unpaid)}</button>
+            : total > 0 && unpaid === 0 ? <span className="chip text-mint"><Icon name="check" size={14} />Paga</span> : null}
+        </div>
+        <div className="mt-5">
+          <div className="mb-1.5 flex justify-between text-[12px]"><span className="text-mist-2">Limite usado <Money v={used} className="text-mist-1" /></span><span className="text-mist-2">Livre <Money v={Math.max(0, c.limit_amount - used)} className="text-mint" /></span></div>
+          <div className="h-2 overflow-hidden rounded-full bg-white/5"><div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: pct > 85 ? 'rgb(var(--c-coral))' : 'linear-gradient(90deg, var(--me), var(--duo))' }} /></div>
+        </div>
+      </div>
+      <button className="flex w-full items-center justify-between border-t border-white/5 px-5 py-3 text-sm text-mist-2 hover:bg-white/[.03]" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>
+        <span>{inv.length ? `${inv.length} compra${inv.length === 1 ? '' : 's'} nesta fatura` : 'Nenhuma compra nesta fatura ainda'}</span>{inv.length > 0 && <Icon name="down" size={16} className={`transition ${expanded ? 'rotate-180' : ''}`} />}
+      </button>
+      {expanded && inv.length > 0 && <ul className="px-2 pb-2 sm:px-3">{inv.map(t => <TxRow key={t.id} t={t} data={data} onOpen={onOpen} meId={me.id} />)}</ul>}
+    </section>
+  );
+}
+
+const addDays = (d: string, n: number) => { const x = new Date(d + 'T12:00'); x.setDate(x.getDate() + n); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
 
 function InvoiceHistory() {
   const data = useStore(s => s.data), month = useStore(s => s.month);

@@ -265,3 +265,23 @@ it('resumo da semana compara com a anterior', () => {
   expect(w.biggest?.amount).toBe(100);
   expect(w.topChange?.category_id).toBe('c-Restaurantes & Delivery');
 });
+
+import { invoiceInfo } from './cards';
+import { inMonthList } from './metrics';
+describe('fatura aberta e lista do mês', () => {
+  const sicredi = { closing_day: 27, due_day: 10 };
+  it('compra de novembro em cartão que fecha 27 e vence 10 cai na fatura de dezembro, que está aberta', () => {
+    expect(invoiceMonth(sicredi, '2026-11-03')).toBe('2026-12-01');
+    expect(invoiceInfo(sicredi, '2026-12-01', '2026-11-05')).toEqual({ due: '2026-12-10', closing: '2026-11-27', status: 'aberta' });
+    expect(invoiceInfo(sicredi, '2026-11-01', '2026-11-05').status).toBe('fechada');
+    expect(invoiceInfo(sicredi, '2027-01-01', '2026-11-05').status).toBe('futura');
+  });
+  it('compra no cartão aparece na lista do mês em que foi feita; parcelas seguintes no mês da fatura', () => {
+    const c = tx({ method: 'card', card_id: 'x', occurred_on: '2026-11-03', month: '2026-12-01', installment_no: 1, installment_total: 3 });
+    const p2 = { ...c, month: '2027-01-01', installment_no: 2 };
+    expect(inMonthList(c, '2026-11-01')).toBe(true);
+    expect(inMonthList(c, '2026-12-01')).toBe(false);
+    expect(inMonthList(p2, '2027-01-01')).toBe(true);
+    expect(inMonthList(tx({}), '2026-11-01')).toBe(true);
+  });
+});

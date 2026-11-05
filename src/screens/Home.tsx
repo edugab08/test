@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { byCategory, monthMetrics, rule503020, weekSummary } from '../domain/metrics';
+import { byCategory, inMonthList, monthMetrics, rule503020, weekSummary } from '../domain/metrics';
 import { parts, MONTHS_SHORT, monthLabel, thisMonth, today } from '../domain/dates';
 import { fmt, parseAmount, round2 } from '../domain/money';
 import { cardInvoice } from '../domain/cards';
@@ -41,7 +41,7 @@ export function Home({ onOpen, go }: { onOpen: (t: Tx) => void; go: (v: string) 
     if (inv.length && days >= 0 && days <= 7) alerts.push({ icon: 'card', tone: 'text-amber', text: `Fatura ${c.name} de ${fmt(inv.reduce((s, t) => s + t.amount, 0))} vence ${days === 0 ? 'hoje' : `em ${days} dia${days > 1 ? 's' : ''}`}`, to: 'cards' });
   });
 
-  const recent = [...m.txs].sort((a, b) => (b.occurred_on + (b.created_at ?? '')).localeCompare(a.occurred_on + (a.created_at ?? ''))).slice(0, 6);
+  const recent = data.transactions.filter(t => inMonthList(t, month)).sort((a, b) => (b.occurred_on + (b.created_at ?? '')).localeCompare(a.occurred_on + (a.created_at ?? ''))).slice(0, 6);
   const people = m.people;
 
   return (
