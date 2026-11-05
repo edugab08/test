@@ -1,0 +1,254 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =====================================================================
+   Estilos visuais. Cada [data-theme] redefine as mesmas variáveis;
+   os componentes só usam as variáveis, então trocar de estilo é instantâneo.
+   Cores em "R G B" para o Tailwind aceitar transparência (bg-ink/60 etc.).
+   ===================================================================== */
+
+/* ---------- Aurora: o visual atual, vidro escuro e neon ---------- */
+:root, [data-theme='aurora'] {
+  --bg: #060912;
+  --c-ink: 6 9 18; --c-ink2: 11 16 32; --c-ink3: 18 25 51;
+  --c-mist1: 233 238 255; --c-mist2: 169 179 214; --c-mist3: 107 118 160;
+  --c-mint: 75 227 166; --c-amber: 255 200 97; --c-coral: 255 107 122; --c-sky: 125 211 252;
+  --ov: 255 255 255;
+  --duo: #9B8CFF;
+  --primary-bg: linear-gradient(135deg, var(--me), var(--duo) 60%, var(--her));
+  --on-primary: #060912;
+  --panel-bg: linear-gradient(160deg, rgba(255,255,255,.055), rgba(255,255,255,.015) 45%), rgba(16,22,44,.55);
+  --panel-border: 1px solid rgba(255,255,255,.07);
+  --panel-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 24px 48px -28px rgba(0,0,0,.9);
+  --panel-blur: blur(24px) saturate(150%);
+  --sheet-bg: linear-gradient(160deg, rgba(255,255,255,.06), rgba(255,255,255,.01) 45%), rgba(10,14,30,.94);
+  --field-bg: rgba(3,6,16,.6);
+  --radius: 22px; --radius-sm: 14px;
+  --font-display: 'Sora Variable', system-ui, sans-serif;
+  --font-body: 'Plus Jakarta Sans Variable', system-ui, sans-serif;
+  --font-num: 'Sora Variable', system-ui, sans-serif;
+  --num-weight: 700;
+  --tint: 100%;
+  --ambient:
+    radial-gradient(40% 35% at 12% 8%, color-mix(in srgb, var(--me) 22%, transparent), transparent 70%),
+    radial-gradient(38% 34% at 92% 88%, color-mix(in srgb, var(--her) 18%, transparent), transparent 70%),
+    radial-gradient(30% 30% at 70% 20%, color-mix(in srgb, var(--duo) 10%, transparent), transparent 70%);
+  color-scheme: dark;
+}
+
+/* ---------- Holográfico: claro, perolado, com um cartão de folha iridescente ---------- */
+[data-theme='holo'] {
+  --bg: #ECEFF6;
+  --c-ink: 236 239 246; --c-ink2: 226 231 242; --c-ink3: 255 255 255;
+  --c-mist1: 17 20 42; --c-mist2: 74 80 112; --c-mist3: 120 127 160;
+  --c-mint: 3 140 96; --c-amber: 190 108 0; --c-coral: 214 48 72; --c-sky: 2 120 190;
+  --ov: 22 26 56;
+  --duo: #7C6CF2;
+  --primary-bg: linear-gradient(135deg, #14172E, #2B3060);
+  --on-primary: #FFFFFF;
+  --panel-bg: linear-gradient(170deg, rgba(255,255,255,.86), rgba(255,255,255,.6));
+  --panel-border: 1px solid rgba(255,255,255,.95);
+  --panel-shadow: 0 1px 0 rgba(255,255,255,1) inset, 0 22px 44px -26px rgba(38,46,110,.38), 0 2px 6px -2px rgba(38,46,110,.08);
+  --panel-blur: blur(30px) saturate(180%);
+  --sheet-bg: rgba(250,251,255,.97);
+  --field-bg: rgba(255,255,255,.9);
+  --radius: 28px; --radius-sm: 16px;
+  --font-display: 'Unbounded Variable', system-ui, sans-serif;
+  --font-body: 'Manrope Variable', system-ui, sans-serif;
+  --font-num: 'Unbounded Variable', system-ui, sans-serif;
+  --num-weight: 600;
+  --tint: 58%;
+  --ambient:
+    radial-gradient(42% 38% at 8% 6%, #B9ECFF, transparent 70%),
+    radial-gradient(40% 36% at 96% 18%, #F4C9EC, transparent 70%),
+    radial-gradient(46% 40% at 80% 96%, #D8CFFF, transparent 70%),
+    radial-gradient(36% 30% at 14% 92%, #FFE1C4, transparent 70%);
+  color-scheme: light;
+}
+
+/* ---------- Risografia: papel, duas tintas que se sobrepõem, impressão fora de registro ---------- */
+[data-theme='riso'] {
+  --bg: #E7EAEE;
+  --c-ink: 231 234 238; --c-ink2: 222 226 232; --c-ink3: 247 248 250;
+  --c-mist1: 24 28 58; --c-mist2: 66 71 104; --c-mist3: 112 117 142;
+  --c-mint: 0 138 86; --c-amber: 200 110 0; --c-coral: 220 30 70; --c-sky: 45 91 227;
+  --ov: 24 28 58;
+  --duo: #6A3FC0;
+  --primary-bg: var(--me);
+  --on-primary: #FFFFFF;
+  --panel-bg: #F7F8FA;
+  --panel-border: 2px solid rgb(24 28 58);
+  --panel-shadow: 6px 6px 0 color-mix(in srgb, var(--her) 75%, transparent);
+  --panel-blur: none;
+  --sheet-bg: #F7F8FA;
+  --field-bg: #FFFFFF;
+  --radius: 12px; --radius-sm: 8px;
+  --font-display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --font-body: 'Instrument Sans Variable', system-ui, sans-serif;
+  --font-num: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --num-weight: 800;
+  --tint: 78%;
+  --ambient: none;
+  color-scheme: light;
+}
+
+/* ---------- Reserva: vinho, ouro e números com serifa, como um banco privado ---------- */
+[data-theme='reserva'] {
+  --bg: #12080F;
+  --c-ink: 18 8 15; --c-ink2: 30 13 25; --c-ink3: 46 20 37;
+  --c-mist1: 246 236 222; --c-mist2: 198 178 160; --c-mist3: 142 120 106;
+  --c-mint: 140 214 170; --c-amber: 238 190 104; --c-coral: 240 122 110; --c-sky: 168 204 232;
+  --ov: 255 236 210;
+  --duo: #C49BD8;
+  --primary-bg: linear-gradient(135deg, #F6DCA0, #C99A4B);
+  --on-primary: #1A0C14;
+  --panel-bg: linear-gradient(165deg, rgba(255,220,170,.05), rgba(255,220,170,.01) 50%), rgba(44,17,34,.6);
+  --panel-border: 1px solid rgba(227,188,114,.16);
+  --panel-shadow: inset 0 1px 0 rgba(255,225,170,.07), 0 30px 60px -34px rgba(0,0,0,.95);
+  --panel-blur: blur(20px) saturate(130%);
+  --sheet-bg: rgba(30,12,24,.97);
+  --field-bg: rgba(14,5,11,.6);
+  --radius: 16px; --radius-sm: 10px;
+  --font-display: 'Fraunces Variable', Georgia, serif;
+  --font-body: 'Manrope Variable', system-ui, sans-serif;
+  --font-num: 'Fraunces Variable', Georgia, serif;
+  --num-weight: 600;
+  --tint: 100%;
+  --ambient:
+    radial-gradient(45% 40% at 10% 0%, rgba(128,22,58,.55), transparent 70%),
+    radial-gradient(40% 36% at 100% 100%, rgba(201,154,75,.22), transparent 70%);
+  color-scheme: dark;
+}
+
+html, body { background: var(--bg); }
+body {
+  @apply text-mist-1 antialiased;
+  font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+  min-height: 100dvh;
+  transition: background-color .4s;
+}
+body::before {
+  content: ''; position: fixed; inset: -20%; z-index: -1; pointer-events: none;
+  background: var(--ambient);
+  filter: blur(10px);
+}
+/* Risografia: grão de papel por cima de tudo */
+[data-theme='riso'] body::after {
+  content: ''; position: fixed; inset: 0; z-index: 70; pointer-events: none; opacity: .35; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .1 0 0 0 0 .1 0 0 0 0 .2 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@layer components {
+  .num { font-family: var(--font-num); font-variant-numeric: tabular-nums lining-nums; letter-spacing: -0.03em; }
+  .font-display { font-family: var(--font-display); }
+  [data-theme='holo'] .num { letter-spacing: -0.04em; }
+  [data-theme='riso'] .num, [data-theme='riso'] .font-display { font-variation-settings: 'wdth' 80; letter-spacing: -0.02em; }
+  [data-theme='reserva'] .num, [data-theme='reserva'] .font-display { font-variation-settings: 'opsz' 72, 'SOFT' 50; letter-spacing: -0.01em; }
+
+  .panel {
+    background: var(--panel-bg);
+    backdrop-filter: var(--panel-blur);
+    -webkit-backdrop-filter: var(--panel-blur);
+    border: var(--panel-border);
+    border-radius: var(--radius);
+    box-shadow: var(--panel-shadow);
+  }
+  .panel-quiet { background: rgb(var(--ov) / .035); border: 1px solid rgb(var(--ov) / .08); border-radius: var(--radius-sm); }
+  [data-theme='riso'] .panel-quiet { border: 1.5px solid rgb(var(--ov) / .9); background: #fff; }
+
+  .field {
+    @apply w-full px-3.5 py-3 text-[15px] text-mist-1 outline-none transition;
+    border-radius: var(--radius-sm);
+    background: var(--field-bg); border: 1px solid rgb(var(--ov) / .1);
+  }
+  [data-theme='riso'] .field { border: 1.5px solid rgb(var(--ov)); }
+  .field::placeholder { color: rgb(var(--c-mist3)); }
+  .field:focus { border-color: color-mix(in srgb, var(--me) 70%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--me) 20%, transparent); }
+  select.field { appearance: none; background-image: linear-gradient(45deg, transparent 50%, rgb(var(--c-mist3)) 50%), linear-gradient(135deg, rgb(var(--c-mist3)) 50%, transparent 50%); background-position: calc(100% - 18px) 52%, calc(100% - 13px) 52%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 2.2rem; }
+  .label { @apply mb-1.5 block text-[12px] font-medium text-mist-2; }
+
+  .btn { @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold transition active:scale-[.97] disabled:opacity-50; border-radius: var(--radius-sm); }
+  .btn-primary { @apply btn; color: var(--on-primary); background: var(--primary-bg); box-shadow: 0 10px 30px -12px color-mix(in srgb, var(--duo) 70%, transparent); }
+  [data-theme='riso'] .btn-primary { box-shadow: 4px 4px 0 var(--her); border: 2px solid rgb(var(--ov)); }
+  [data-theme='reserva'] .btn-primary { box-shadow: 0 10px 30px -14px rgba(227,188,114,.6); }
+  .btn-ghost { @apply btn text-mist-1; background: rgb(var(--ov) / .05); border: 1px solid rgb(var(--ov) / .08); }
+  .btn-ghost:hover { background: rgb(var(--ov) / .09); }
+  [data-theme='riso'] .btn-ghost { border: 1.5px solid rgb(var(--ov)); background: #fff; }
+  .btn-danger { @apply btn text-coral; background: rgb(var(--c-coral) / .08); border: 1px solid rgb(var(--c-coral) / .25); }
+  .on-primary { color: var(--on-primary); background: var(--primary-bg); }
+
+  .seg { @apply flex p-1; border-radius: var(--radius-sm); background: var(--field-bg); border: 1px solid rgb(var(--ov) / .08); }
+  .seg > button { @apply flex-1 whitespace-nowrap px-2 py-2 text-[13px] font-semibold text-mist-2 transition; border-radius: calc(var(--radius-sm) - 4px); }
+  .seg > button[aria-pressed='true'] { @apply text-mist-1; background: rgb(var(--ov) / .1); box-shadow: inset 0 1px 0 rgb(var(--ov) / .08); }
+  [data-theme='holo'] .seg > button[aria-pressed='true'] { background: #fff; box-shadow: 0 2px 8px -2px rgba(38,46,110,.25); }
+  [data-theme='riso'] .seg { border: 1.5px solid rgb(var(--ov)); }
+  [data-theme='riso'] .seg > button[aria-pressed='true'] { background: rgb(var(--ov)); color: #fff; box-shadow: none; }
+  [data-theme='reserva'] .seg > button[aria-pressed='true'] { color: #F6DCA0; background: rgba(227,188,114,.12); }
+
+  .chip { @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium; background: rgb(var(--ov) / .05); border: 1px solid rgb(var(--ov) / .08); }
+  .chip[aria-pressed='true'] { background: rgb(var(--ov) / .12); border-color: rgb(var(--ov) / .2); }
+  [data-theme='riso'] .chip { border: 1.5px solid rgb(var(--ov)); background: #fff; }
+  [data-theme='riso'] .chip[aria-pressed='true'] { background: rgb(var(--ov)); color: #fff; }
+
+  .duo-track { @apply flex h-2.5 w-full overflow-hidden rounded-full; background: rgb(var(--ov) / .07); gap: 2px; }
+  .duo-track > i { display: block; height: 100%; border-radius: 999px; transition: flex-grow .7s cubic-bezier(.2,.8,.2,1); }
+  /* na risografia as duas tintas se sobrepõem no meio, como impressão de verdade */
+  [data-theme='riso'] .duo-track { height: 14px; border-radius: 3px; gap: 0; background: transparent; border: 1.5px solid rgb(var(--ov)); }
+  [data-theme='riso'] .duo-track > i { border-radius: 0; box-shadow: none !important; mix-blend-mode: multiply; margin-right: -14px; }
+  [data-theme='riso'] .duo-track > i:last-child { margin-right: 0; }
+  [data-theme='holo'] .duo-track { height: 10px; }
+
+  /* ---------- O herói de cada estilo ---------- */
+  .hero-num { font-size: 44px; line-height: 1; font-weight: var(--num-weight); }
+  @media (min-width: 640px) { .hero-num { font-size: 56px; } }
+  [data-theme='holo'] .hero-num { font-size: 34px; }
+  @media (min-width: 640px) { [data-theme='holo'] .hero-num { font-size: 46px; } }
+
+  /* Holográfico: cartão de folha iridescente que muda de cor com o dedo / mouse */
+  [data-theme='holo'] .hero {
+    --mx: 30%; --my: 20%; --ang: 110deg;
+    background:
+      radial-gradient(45% 65% at var(--mx) var(--my), rgba(255,255,255,.75), transparent 65%),
+      conic-gradient(from var(--ang) at 72% 38%, #8EDCFF, #C3AEFF, #FFB0DC, #FFE19A, #A6F5D2, #8EDCFF);
+    border: 1px solid rgba(255,255,255,.95);
+    box-shadow: 0 30px 60px -30px rgba(70,60,160,.45), inset 0 1px 0 #fff;
+  }
+  [data-theme='holo'] .hero::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: .45; mix-blend-mode: overlay;
+    background: repeating-linear-gradient(115deg, transparent 0 12px, rgba(255,255,255,.55) 12px 13px);
+  }
+
+  /* Risografia: retícula de pontos e número impresso fora de registro */
+  [data-theme='riso'] .hero {
+    background:
+      radial-gradient(circle, color-mix(in srgb, var(--me) 28%, transparent) 1.2px, transparent 1.6px) 0 0 / 9px 9px,
+      #F7F8FA;
+  }
+  [data-theme='riso'] .hero-num { font-size: 58px; color: var(--me); text-shadow: 3px 2px 0 color-mix(in srgb, var(--her) 85%, transparent); }
+  @media (min-width: 640px) { [data-theme='riso'] .hero-num { font-size: 76px; } }
+
+  /* Reserva: número em ouro */
+  [data-theme='reserva'] .hero-num { background: linear-gradient(180deg, #FBE7B8, #D3A55A); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  [data-theme='reserva'] .hero { background: radial-gradient(80% 120% at 0% 0%, rgba(128,22,58,.45), transparent 60%), var(--panel-bg); }
+}
+
+.privacy .money { filter: blur(9px); transition: filter .25s; }
+.privacy .money:hover { filter: none; }
+
+.sheet-backdrop { animation: fade .2s ease both; }
+.sheet { animation: rise .32s cubic-bezier(.2,.9,.25,1) both; }
+@media (min-width: 768px) { .sheet { animation: pop .25s cubic-bezier(.2,.9,.25,1) both; } }
+@keyframes fade { from { opacity: 0 } }
+@keyframes rise { from { transform: translateY(40px); opacity: 0 } }
+@keyframes pop { from { transform: scale(.96); opacity: 0 } }
+.view-enter { animation: view .35s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes view { from { opacity: 0; transform: translateY(6px) } }
+
+.scroll-x { overflow-x: auto; scrollbar-width: none; }
+.scroll-x::-webkit-scrollbar { display: none; }
+.safe-b { padding-bottom: calc(env(safe-area-inset-bottom) + 6px); }
+
+:focus-visible { outline: 2px solid var(--me); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
