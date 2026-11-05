@@ -38,11 +38,11 @@ function Visual() {
               className={`group relative overflow-hidden rounded-2xl p-3 text-left text-mist-1 transition ${theme === t.id ? 'ring-2 ring-[var(--me)] ring-offset-2 ring-offset-[var(--bg)]' : 'opacity-90 hover:opacity-100'}`}>
               <div className="hero panel relative p-3.5" style={{ fontFamily: 'var(--font-body)' }}>
                 <p className="text-[11px] text-mist-2">Sobra do mês</p>
-                <p className="num mt-1 text-[26px] leading-none" style={{ fontWeight: 'var(--num-weight)' as unknown as number }}>R$ 3.808</p>
+                <p className="num big-num mt-1.5 text-[26px] leading-none" style={{ fontWeight: 'var(--num-weight)' as unknown as number }}>R$ 3.808</p>
                 <div className="duo-track mt-3"><i style={{ flexGrow: 0.58, background: 'var(--me)' }} /><i style={{ flexGrow: 0.42, background: 'var(--her)' }} /></div>
               </div>
-              <p className="mt-3 font-display text-[15px] font-semibold">{t.name}{theme === t.id && <span className="ml-2 align-middle text-[11px] font-medium text-mint">em uso</span>}</p>
-              <p className="mt-0.5 text-[12px] leading-snug text-mist-2" style={{ fontFamily: 'var(--font-body)' }}>{t.blurb}</p>
+              <p className="mt-3.5 font-display text-[15px] font-semibold">{t.name}{theme === t.id && <span className="ml-2 align-middle text-[11px] font-medium text-mint">em uso</span>}</p>
+              <p className="mt-1 text-[12px] leading-snug text-mist-2" style={{ fontFamily: 'var(--font-body)' }}>{t.blurb}</p>
             </button>
           );
         })}
@@ -63,8 +63,8 @@ function Profile() {
       </div>
       <p className="label mt-4">Sua cor — marca tudo o que é seu no app</p>
       {owned && <p className="-mt-0.5 mb-2 text-[12px] text-mist-3">Neste visual as cores do casal são as do estilo; a sua escolha vale nos outros.</p>}
-      <div className="flex flex-wrap gap-2.5">
-        {COLORS.map(c => <button key={c} onClick={() => save('members', { ...me, color: c } as unknown as Record<string, unknown>)} className="h-9 w-9 rounded-full transition hover:scale-110" style={{ background: c, boxShadow: me.color === c ? `0 0 0 3px #060912, 0 0 0 5px ${c}` : 'none' }} aria-label={`Usar a cor ${c}`} aria-pressed={me.color === c} />)}
+      <div className="grid grid-cols-8 gap-2 sm:flex sm:flex-wrap sm:gap-2.5">
+        {COLORS.map(c => <button key={c} onClick={() => save('members', { ...me, color: c } as unknown as Record<string, unknown>)} className="aspect-square w-full max-w-9 rounded-full transition hover:scale-110 sm:h-9 sm:w-9" style={{ background: c, boxShadow: me.color === c ? `0 0 0 3px #060912, 0 0 0 5px ${c}` : 'none' }} aria-label={`Usar a cor ${c}`} aria-pressed={me.color === c} />)}
       </div>
     </Section>
   );

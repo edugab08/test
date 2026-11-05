@@ -69,7 +69,7 @@ function Shell() {
       <aside className="sidebar fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-white/5 bg-ink/40 p-5 backdrop-blur-xl lg:flex">
         <div className="mb-8 flex items-center gap-2.5 px-2">
           <span className="flex -space-x-2"><span className="h-6 w-6 rounded-full bg-me" /><span className="h-6 w-6 rounded-full bg-her mix-blend-screen" /></span>
-          <span className="font-display text-[17px] font-bold">Finanças a Dois</span>
+          <span className="truncate whitespace-nowrap font-display text-[16px] font-bold [[data-theme=holo]_&]:text-[14px]">Finanças a Dois</span>
         </div>
         <button className="btn-primary mb-6 w-full py-3" onClick={() => setForm({})}><Icon name="plus" size={18} />Lançar <kbd className="ml-auto rounded bg-black/20 px-1.5 text-[11px]">N</kbd></button>
         <nav className="space-y-1" aria-label="Seções">

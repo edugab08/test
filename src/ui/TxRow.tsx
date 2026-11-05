@@ -17,7 +17,7 @@ export function TxRow({ t, data, onOpen, meId }: { t: Tx; data: Data; onOpen: (t
     ? (payer ? payer.display_name.split(' ')[0] : 'Conjunta')
     : `${payer ? payer.display_name.split(' ')[0] : 'Conjunta'}${t.shared ? '' : ' · pessoal'}`;
   return (
-    <li className="group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-white/[.035]">
+    <li className="group relative flex items-center gap-3 rounded-2xl px-2 py-3 transition hover:bg-white/[.035]">
       <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full" style={{ background: color, boxShadow: `0 0 10px ${color}` }} aria-hidden="true" />
       <span className="ml-2 grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: catColor(cat?.color) + '1f', color: tint(catColor(cat?.color)) }}>
         <Icon name={cat?.icon ?? 'box'} size={18} />
@@ -28,7 +28,7 @@ export function TxRow({ t, data, onOpen, meId }: { t: Tx; data: Data; onOpen: (t
           {t.installment_total && <span className="ml-1.5 text-[12px] text-mist-3">{t.installment_no}/{t.installment_total}</span>}
           {t.recurring_id && <Icon name="repeat" size={12} className="ml-1.5 inline text-mist-3" />}
         </span>
-        <span className="block truncate text-[12px] text-mist-3">{cat?.name ?? 'Sem categoria'} · {card ? card.name : METHOD[t.method]} · <span style={{ color: tint(color) }}>{who}</span>{t.notes ? ` · ${t.notes}` : ''}</span>
+        <span className="mt-0.5 block truncate text-[12px] text-mist-3">{cat?.name ?? 'Sem categoria'} · {card ? card.name : METHOD[t.method]} · <span style={{ color: tint(color) }}>{who}</span>{t.notes ? ` · ${t.notes}` : ''}</span>
       </button>
       <div className="flex flex-col items-end gap-1">
         <Money v={isIn ? t.amount : -t.amount} className={`text-[15px] font-semibold ${isIn ? 'text-mint' : t.kind === 'investment' ? 'text-sky' : ''}`} sign />

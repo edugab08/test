@@ -32,12 +32,12 @@ export function Cards({ onOpen }: { onOpen: (t: Tx) => void }) {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-display text-lg font-semibold">{c.name}</p>
-                  <p className="text-[12px] text-mist-2">Fecha dia {c.closing_day}, vence dia {c.due_day}{holder ? ` · de ${holder.id === me.id ? 'você' : holder.display_name}` : ''}</p>
+                  <p className="mt-0.5 text-[12px] text-mist-2">Fecha dia {c.closing_day}, vence dia {c.due_day}{holder ? ` · de ${holder.id === me.id ? 'você' : holder.display_name}` : ''}</p>
                 </div>
                 <button className="rounded-full p-2 text-mist-2 hover:bg-white/5" onClick={() => setEdit(c)} aria-label={`Editar ${c.name}`}><Icon name="edit" size={16} /></button>
               </div>
               <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
-                <div><p className="text-[12px] text-mist-2">Fatura de {monthLabel(month)}</p><Money v={total} className="text-3xl font-bold" /></div>
+                <div><p className="mb-1 text-[12px] text-mist-2">Fatura de {monthLabel(month)}</p><Money v={total} className="block text-3xl font-bold" /></div>
                 {unpaid > 0
                   ? <button className="btn-primary" onClick={() => { const ids = inv.filter(t => !t.paid); save('transactions', ...ids.map(t => ({ ...t, paid: true } as unknown as Record<string, unknown>))); toast(`Fatura ${c.name} paga`, { label: 'Desfazer', run: () => save('transactions', ...(ids as unknown as Record<string, unknown>[])) }); }}>Pagar fatura · {fmt(unpaid)}</button>
                   : total > 0 ? <span className="chip text-mint"><Icon name="check" size={14} />Paga</span> : null}

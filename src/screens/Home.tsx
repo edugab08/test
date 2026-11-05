@@ -51,7 +51,7 @@ export function Home({ onOpen, go }: { onOpen: (t: Tx) => void; go: (v: string) 
         <p className="text-sm text-mist-2">Sobra de {monthLabel(month).split(' ')[0].toLowerCase()}</p>
         <Money v={m.net} className={`hero-num mt-2 block ${m.net < 0 ? 'text-coral' : ''}`} />
         <p className="mt-2 text-sm text-mist-2">Com o que sobrou antes: <Money v={m.balance} className={m.balance < 0 ? 'text-coral' : 'text-mist-1'} /></p>
-        <div className="mt-6 grid grid-cols-3 gap-3 text-sm">
+        <div className="mt-6 grid grid-cols-3 gap-4 text-sm">
           <Stat label="Entrou" v={m.income} tone="text-mint" />
           <Stat label="Saiu" v={m.expenses} />
           <button className="text-left" onClick={() => { try { sessionStorage.setItem('fad_plan_tab', 'saved'); } catch { /* ok */ } go('plan'); }} aria-label="Ver dinheiro guardado"><Stat label="Guardado ›" v={m.invested} tone="text-sky" /></button>
@@ -80,10 +80,10 @@ export function Home({ onOpen, go }: { onOpen: (t: Tx) => void; go: (v: string) 
                 <span className="flex-1 font-medium">{p.member.id === me.id ? 'Você' : p.member.display_name}</span>
                 <Money v={p.free} className={`text-xl font-semibold ${p.free < 0 ? 'text-coral' : ''}`} />
               </div>
-              <dl className="mt-2 grid grid-cols-3 gap-2 pl-10 text-[12px] text-mist-3">
-                <div><dt>Renda</dt><dd className="text-mist-2"><Money v={p.income} /></dd></div>
-                <div><dt>Parte do casal</dt><dd className="text-mist-2"><Money v={p.sharedPart} /></dd></div>
-                <div><dt>Só {p.member.id === me.id ? 'seus' : 'dele(a)'}</dt><dd className="text-mist-2"><Money v={p.personal + p.invested} /></dd></div>
+              <dl className="mt-2.5 grid grid-cols-3 gap-3 pl-10 text-[12px] text-mist-3">
+                <div className="min-w-0"><dt className="mb-0.5">Renda</dt><dd className="truncate text-mist-2"><Money v={p.income} /></dd></div>
+                <div className="min-w-0"><dt className="mb-0.5">Parte do casal</dt><dd className="truncate text-mist-2"><Money v={p.sharedPart} /></dd></div>
+                <div className="min-w-0"><dt className="mb-0.5">Só {p.member.id === me.id ? 'seus' : 'dele(a)'}</dt><dd className="truncate text-mist-2"><Money v={p.personal + p.invested} /></dd></div>
               </dl>
             </div>
           ))}
@@ -166,9 +166,9 @@ function WeekCard() {
   const up = w.diff > 0;
   return (
     <section className="panel grid gap-4 p-4 sm:grid-cols-[auto_1fr_1fr] sm:items-center sm:p-5 lg:col-span-12">
-      <div>
+      <div className="space-y-1">
         <p className="text-[12px] text-mist-2">Últimos 7 dias</p>
-        <Money v={w.total} className="text-2xl font-bold" />
+        <Money v={w.total} className="block text-2xl font-bold" />
         <p className={`text-[12px] ${w.prev === 0 ? 'text-mist-3' : up ? 'text-amber' : 'text-mint'}`}>
           {w.prev === 0 ? 'sem gastos na semana anterior' : `${up ? '+' : '−'}${fmt(Math.abs(w.diff))} vs. semana anterior${w.pct !== null ? ` (${up ? '+' : ''}${Math.round(w.pct)}%)` : ''}`}
         </p>
@@ -190,7 +190,7 @@ function WeekCard() {
 }
 
 function Stat({ label, v, tone = '' }: { label: string; v: number; tone?: string }) {
-  return <div><p className="text-[12px] text-mist-3">{label}</p><Money v={v} className={`text-[15px] font-semibold sm:text-lg ${tone}`} /></div>;
+  return <div className="min-w-0"><p className="mb-1 text-[12px] text-mist-3">{label}</p><Money v={v} className={`block truncate text-[15px] font-semibold ${tone}`} /></div>;
 }
 
 function SettleSheet({ open, onClose, s, month, householdId, meId }: { open: boolean; onClose: () => void; s: ReturnType<typeof monthMetrics>['settlement']; month: string; householdId: string; meId: string }) {

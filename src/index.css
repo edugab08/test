@@ -200,11 +200,16 @@ body::before {
 }
 
 @layer components {
-  .num { font-family: var(--font-num); font-variant-numeric: tabular-nums lining-nums; letter-spacing: -0.03em; }
+  /* Números pequenos usam a fonte do texto, com espaçamento normal (legíveis em qualquer estilo).
+     Só os números grandes ganham a fonte de destaque e as letras mais juntas. */
+  .num { font-family: var(--font-body); font-variant-numeric: tabular-nums lining-nums; letter-spacing: 0; }
+  .num.hero-num, .num.text-lg, .num.text-xl, .num.text-2xl, .num.text-3xl, .num.big-num { font-family: var(--font-num); letter-spacing: -0.02em; }
+  .num.hero-num { letter-spacing: -0.03em; }
   .font-display { font-family: var(--font-display); }
-  [data-theme='holo'] .num { letter-spacing: -0.04em; }
-  [data-theme='riso'] .num, [data-theme='riso'] .font-display { font-variation-settings: 'wdth' 80; letter-spacing: -0.02em; }
-  [data-theme='reserva'] .num, [data-theme='reserva'] .font-display { font-variation-settings: 'opsz' 72, 'SOFT' 50; letter-spacing: -0.01em; }
+  [data-theme='holo'] .num.hero-num { letter-spacing: -0.04em; }
+  [data-theme='riso'] .font-display { font-variation-settings: 'wdth' 85; letter-spacing: -0.01em; }
+  [data-theme='riso'] .num.hero-num, [data-theme='riso'] .num.text-2xl, [data-theme='riso'] .num.text-3xl, [data-theme='riso'] .num.big-num { font-variation-settings: 'wdth' 80; }
+  [data-theme='reserva'] .font-display, [data-theme='reserva'] .num.hero-num, [data-theme='reserva'] .num.text-2xl, [data-theme='reserva'] .num.text-3xl, [data-theme='reserva'] .num.big-num, [data-theme='reserva'] .num.text-xl, [data-theme='reserva'] .num.text-lg { font-variation-settings: 'opsz' 72, 'SOFT' 50; letter-spacing: -0.005em; }
 
   .panel {
     background: var(--panel-bg);

@@ -45,10 +45,10 @@ export function Savings({ onOpen }: { onOpen: (t: Tx) => void }) {
       <section className="panel p-5 sm:p-6 lg:col-span-7">
         <p className="text-sm text-mist-2">Guardado pelo casal</p>
         <Money v={s.total} className="hero-num mt-2 block text-sky" />
-        <div className="mt-5 grid grid-cols-3 gap-3 text-sm">
-          <div><p className="text-[12px] text-mist-3">Em {monthLabel(month).split(' ')[0].toLowerCase()}</p><Money v={s.savedThisMonth} sign className={`text-[15px] font-semibold sm:text-lg ${s.savedThisMonth < 0 ? 'text-coral' : 'text-mint'}`} /></div>
-          <div><p className="text-[12px] text-mist-3">Rende por mês</p><Money v={s.yieldMonth} className="text-[15px] font-semibold sm:text-lg" /></div>
-          <div><p className="text-[12px] text-mist-3">Média guardada</p><Money v={s.avgMonthly} className="text-[15px] font-semibold sm:text-lg" /></div>
+        <div className="mt-6 grid grid-cols-3 gap-4 text-sm">
+          <div className="min-w-0"><p className="mb-1 text-[12px] text-mist-3">Em {monthLabel(month).split(' ')[0].toLowerCase()}</p><Money v={s.savedThisMonth} sign className={`block truncate text-[15px] font-semibold ${s.savedThisMonth < 0 ? 'text-coral' : 'text-mint'}`} /></div>
+          <div className="min-w-0"><p className="mb-1 text-[12px] text-mist-3">Rende por mês</p><Money v={s.yieldMonth} className="block truncate text-[15px] font-semibold" /></div>
+          <div className="min-w-0"><p className="mb-1 text-[12px] text-mist-3">Média guardada</p><Money v={s.avgMonthly} className="block truncate text-[15px] font-semibold" /></div>
         </div>
         <div className="mt-6 flex flex-wrap gap-2">
           <button className="btn-primary" disabled={noWallets} onClick={() => setMove({ mode: 'in' })}><Icon name="plus" size={16} />Guardar</button>
@@ -81,15 +81,17 @@ export function Savings({ onOpen }: { onOpen: (t: Tx) => void }) {
           <ul className="space-y-3">
             {s.wallets.map(({ wallet: w, balance, yieldMonth, share }) => (
               <li key={w.id} className="panel-quiet p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <button className="min-w-0 text-left" onClick={() => setWallet(w)}>
-                    <span className="flex items-center gap-2 font-medium"><Icon name="wallet" size={16} className="text-sky" />{w.name}<Icon name="edit" size={13} className="text-mist-3" /></span>
-                    <span className="text-[12px] text-mist-3">{String(w.rate).replace('.', ',')}% ao ano · rende ~{fmt(yieldMonth)}/mês</span>
-                  </button>
-                  <Money v={balance} className="shrink-0 text-lg font-semibold" />
+                <button className="flex w-full items-center gap-2 text-left" onClick={() => setWallet(w)} aria-label={`Editar ${w.name}`}>
+                  <Icon name="wallet" size={16} className="shrink-0 text-sky" />
+                  <span className="min-w-0 flex-1 truncate font-medium">{w.name}</span>
+                  <Icon name="edit" size={14} className="shrink-0 text-mist-3" />
+                </button>
+                <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <Money v={balance} className="text-xl font-semibold" />
+                  <span className="text-[12px] text-mist-3">{String(w.rate).replace('.', ',')}% ao ano · rende ~{fmt(yieldMonth)}/mês</span>
                 </div>
                 <div className="mt-3 h-1.5 rounded-full bg-white/5"><div className="h-full rounded-full bg-sky transition-all duration-700" style={{ width: `${share * 100}%` }} /></div>
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3.5 flex flex-wrap gap-2">
                   <button className="btn-ghost px-3 py-1.5 text-[13px]" onClick={() => setMove({ mode: 'in', walletId: w.id })}><Icon name="plus" size={14} />Guardar</button>
                   <button className="btn-ghost px-3 py-1.5 text-[13px]" disabled={balance <= 0} onClick={() => setMove({ mode: 'out', walletId: w.id })}><Icon name="swap" size={14} />Resgatar</button>
                 </div>
@@ -112,7 +114,7 @@ export function Savings({ onOpen }: { onOpen: (t: Tx) => void }) {
                   <div className="flex items-baseline justify-between gap-2"><span className="font-medium">{g.name}</span><span className="num text-sm text-mist-2">{Math.round(st.pct)}%</span></div>
                   <div className="mt-1.5 h-2 rounded-full bg-white/5"><div className="h-full rounded-full transition-all duration-700" style={{ width: `${st.pct}%`, background: st.reached ? 'rgb(var(--c-mint))' : 'linear-gradient(90deg, rgb(var(--c-sky)), var(--duo))' }} /></div>
                 </button>
-                <p className="mt-1.5 text-[12px] leading-relaxed text-mist-3">
+                <p className="mt-2 text-[12px] leading-relaxed text-mist-3">
                   {st.reached ? <span className="text-mint">Meta atingida. Parabéns aos dois!</span> : <>
                     <Money v={st.current} className="text-mist-2" /> de <Money v={g.target} className="text-mist-2" /> · faltam <Money v={st.missing} className="text-mist-2" />
                     {st.perMonth !== null && <><br />Para chegar até {monthLabel(g.deadline!).toLowerCase()}: guardar <Money v={st.perMonth} className={behind ? 'text-amber' : 'text-mist-1'} /> por mês.</>}
