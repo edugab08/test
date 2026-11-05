@@ -54,7 +54,7 @@ export function Home({ onOpen, go }: { onOpen: (t: Tx) => void; go: (v: string) 
         <div className="mt-6 grid grid-cols-3 gap-3 text-sm">
           <Stat label="Entrou" v={m.income} tone="text-mint" />
           <Stat label="Saiu" v={m.expenses} />
-          <Stat label="Guardado" v={m.invested} tone="text-sky" />
+          <button className="text-left" onClick={() => { try { sessionStorage.setItem('fad_plan_tab', 'saved'); } catch { /* ok */ } go('plan'); }} aria-label="Ver dinheiro guardado"><Stat label="Guardado ›" v={m.invested} tone="text-sky" /></button>
         </div>
         {people.length > 1 && (
           <div className="mt-6">

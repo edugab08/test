@@ -145,6 +145,9 @@ function Couple() {
       )}
       <p className="label mt-4">Despesas do casal são divididas</p>
       <Seg label="Divisão" value={data.household?.split_mode ?? 'prop'} onChange={v => save('households', { id: data.household!.id, split_mode: v })} options={[['prop', 'Pela renda de cada um'], ['equal', 'Meio a meio']]} />
+      <p className="mt-2 text-[12px] leading-relaxed text-mist-3">{(data.household?.split_mode ?? 'prop') === 'prop'
+        ? 'Quem ganha mais paga uma parte maior das contas do casal. Ex.: se você ganha 60% da renda, paga 60% do aluguel.'
+        : 'Cada um paga metade das contas do casal, não importa quanto ganha.'}</p>
     </Section>
   );
 }

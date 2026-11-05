@@ -64,6 +64,18 @@ export class SupabaseBackend implements Backend {
 
   async upsert(table: TableName, rows: Record<string, unknown>[]) {
     if (!rows.length) return;
+    // casal e pessoas já existem e só aceitam atualização de alguns campos (regra de segurança do banco)
+    const EDITABLE: Partial<Record<TableName, string[]>> = { households: ['name', 'split_mode'], members: ['display_name', 'color'] };
+    const allowed = EDITABLE[table];
+    if (allowed) {
+      for (const r of rows) {
+        const patch = Object.fromEntries(Object.entries(r).filter(([k]) => allowed.includes(k)));
+        if (!Object.keys(patch).length) continue;
+        const { error } = await this.sb.from(table).update(patch).eq('id', String(r.id));
+        this.fail(error);
+      }
+      return;
+    }
     const clean = rows.map(r => { const { created_at: _c, updated_at: _u, ...rest } = r; return rest; });
     const { error } = await this.sb.from(table).upsert(clean);
     this.fail(error);
