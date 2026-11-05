@@ -66,7 +66,7 @@ function Shell() {
   return (
     <div className={privacy ? 'privacy' : ''}>
       {/* Lateral (desktop) */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-white/5 bg-ink/40 p-5 backdrop-blur-xl lg:flex">
+      <aside className="sidebar fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-white/5 bg-ink/40 p-5 backdrop-blur-xl lg:flex">
         <div className="mb-8 flex items-center gap-2.5 px-2">
           <span className="flex -space-x-2"><span className="h-6 w-6 rounded-full bg-me" /><span className="h-6 w-6 rounded-full bg-her mix-blend-screen" /></span>
           <span className="font-display text-[17px] font-bold">Finanças a Dois</span>
@@ -87,7 +87,7 @@ function Shell() {
       </aside>
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 border-b border-white/5 bg-ink/60 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+        <header className="topbar sticky top-0 z-20 border-b border-white/5 bg-ink/60 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-2 sm:px-6">
             <h1 className="hidden font-display text-lg font-semibold sm:block lg:w-40">{title}</h1>
             <MonthSwitcher />
@@ -110,11 +110,11 @@ function Shell() {
       </div>
 
       {/* Doca (celular) */}
-      <nav className="safe-b fixed inset-x-0 bottom-0 z-30 border-t border-white/5 bg-ink/80 px-2 pt-1.5 backdrop-blur-xl lg:hidden" aria-label="Seções">
+      <nav className="dock safe-b fixed inset-x-0 bottom-0 z-30 border-t border-white/5 bg-ink/80 px-2 pt-1.5 backdrop-blur-xl lg:hidden" aria-label="Seções">
         <div className="mx-auto grid max-w-md grid-cols-5 items-end">
           {VIEWS.slice(0, 2).map(v => <DockBtn key={v.id} v={v} on={view === v.id} go={() => setView(v.id)} />)}
           <div className="flex justify-center">
-            <button className="btn-primary -mt-6 grid h-14 w-14 place-items-center !p-0 !rounded-2xl"  onClick={() => setForm({})} aria-label="Novo lançamento"><Icon name="plus" size={26} stroke={2.4} /></button>
+            <button className="dock-plus btn-primary -mt-6 grid h-14 w-14 place-items-center !p-0 !rounded-2xl"  onClick={() => setForm({})} aria-label="Novo lançamento"><Icon name="plus" size={26} stroke={2.4} /></button>
           </div>
           {VIEWS.slice(2, 4).map(v => <DockBtn key={v.id} v={v} on={view === v.id} go={() => setView(v.id)} />)}
         </div>

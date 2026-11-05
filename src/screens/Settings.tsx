@@ -27,9 +27,9 @@ function Visual() {
   const theme = useStore(s => s.theme), me = useStore(meOf)!, partner = useStore(partnerOf);
   return (
     <section className="panel p-4 sm:p-5 lg:col-span-2">
-      <div className="mb-1 flex items-baseline justify-between gap-2"><h2 className="font-display text-[15px] font-semibold">Visual</h2><span className="text-[12px] text-mist-3">vale só para este aparelho</span></div>
+      <div className="mb-1 flex items-baseline justify-between gap-2"><h2 className="font-display text-[15px] font-semibold">Visual</h2><span className="text-[12px] text-mist-3">cada um escolhe o seu, neste aparelho</span></div>
       <p className="mb-4 text-[13px] text-mist-2">Toque para experimentar. O app inteiro muda na hora.</p>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {THEMES.map(t => {
           const vars = { '--me': t.couple?.[0] ?? me.color, '--her': t.couple?.[1] ?? partner?.color ?? '#FF7AB6', background: 'var(--ambient), var(--bg)' } as React.CSSProperties;
           return (

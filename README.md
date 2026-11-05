@@ -55,7 +55,14 @@ Rode a importação uma vez só: importar duas vezes duplica os lançamentos.
 
 ## Estilos visuais
 
-Em **Ajustes → Visual** há quatro estilos para comparar: Aurora, Holográfico, Risografia e Reserva. Para abrir direto em um deles, use `?visual=holo` (ou `riso`, `reserva`, `aurora`) no endereço. A escolha vale para o aparelho.
+Em **Ajustes → Visual** cada pessoa escolhe o seu estilo:
+- **Aurora**
+- **Vidro**, inspirado no vidro líquido da Apple, que acompanha o modo claro/escuro do celular
+- **Holográfico**
+- **Risografia**
+- **Reserva**
+
+Para abrir direto em um deles, use `?visual=vidro` (ou `aurora`, `holo`, `riso`, `reserva`) no endereço. A escolha vale para o aparelho.
 
 ## Como usar no dia a dia
 

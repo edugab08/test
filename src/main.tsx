@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import '@fontsource-variable/sora';
+import '@fontsource-variable/inter';
 import '@fontsource-variable/plus-jakarta-sans';
 import '@fontsource-variable/unbounded';
 import '@fontsource-variable/manrope';
