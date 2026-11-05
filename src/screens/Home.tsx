@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { byCategory, monthMetrics, rule503020 } from '../domain/metrics';
-import { parts, MONTHS_SHORT, monthLabel, today } from '../domain/dates';
+import { byCategory, monthMetrics, rule503020, weekSummary } from '../domain/metrics';
+import { parts, MONTHS_SHORT, monthLabel, thisMonth, today } from '../domain/dates';
 import { fmt, parseAmount, round2 } from '../domain/money';
 import { cardInvoice } from '../domain/cards';
 import { uuid } from '../domain/build';
@@ -45,7 +45,7 @@ export function Home({ onOpen, go }: { onOpen: (t: Tx) => void; go: (v: string) 
   const people = m.people;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-12">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 [&>*]:min-w-0">
       {/* Herói: a sobra do mês, dividida pelas cores de cada um */}
       <section className="hero panel relative overflow-hidden p-5 sm:p-7 lg:col-span-7" onPointerMove={e => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`); e.currentTarget.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`); e.currentTarget.style.setProperty('--ang', `${((e.clientX - r.left) / r.width) * 360}deg`); }}>
         <p className="text-sm text-mist-2">Sobra de {monthLabel(month).split(' ')[0].toLowerCase()}</p>
@@ -109,6 +109,8 @@ export function Home({ onOpen, go }: { onOpen: (t: Tx) => void; go: (v: string) 
         </div>
       )}
 
+      {month === thisMonth() && <WeekCard />}
+
       <Section title="Para onde foi" className="lg:col-span-7">
         {cats.length === 0 ? <p className="py-6 text-center text-sm text-mist-2">Nenhuma despesa neste mês.</p> : (
           <div className="flex flex-col items-center gap-5 sm:flex-row">
@@ -153,6 +155,37 @@ export function Home({ onOpen, go }: { onOpen: (t: Tx) => void; go: (v: string) 
 
       <SettleSheet open={settleOpen} onClose={() => setSettleOpen(false)} s={m.settlement} month={month} householdId={data.household!.id} meId={me.id} />
     </div>
+  );
+}
+
+function WeekCard() {
+  const data = useStore(s => s.data);
+  const w = useMemo(() => weekSummary(data, today()), [data]);
+  if (!w.count && !w.prev) return null;
+  const cat = (id: string | null) => data.categories.find(c => c.id === id);
+  const up = w.diff > 0;
+  return (
+    <section className="panel grid gap-4 p-4 sm:grid-cols-[auto_1fr_1fr] sm:items-center sm:p-5 lg:col-span-12">
+      <div>
+        <p className="text-[12px] text-mist-2">Últimos 7 dias</p>
+        <Money v={w.total} className="text-2xl font-bold" />
+        <p className={`text-[12px] ${w.prev === 0 ? 'text-mist-3' : up ? 'text-amber' : 'text-mint'}`}>
+          {w.prev === 0 ? 'sem gastos na semana anterior' : `${up ? '+' : '−'}${fmt(Math.abs(w.diff))} vs. semana anterior${w.pct !== null ? ` (${up ? '+' : ''}${Math.round(w.pct)}%)` : ''}`}
+        </p>
+      </div>
+      {w.topChange && Math.abs(w.topChange.diff) >= 1 && (
+        <div className="panel-quiet flex items-center gap-3 p-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: catColor(cat(w.topChange.category_id)?.color) + '1f', color: tint(catColor(cat(w.topChange.category_id)?.color)) }}><Icon name={cat(w.topChange.category_id)?.icon ?? 'box'} size={17} /></span>
+          <p className="text-[13px] leading-snug text-mist-2"><b className="text-mist-1">{cat(w.topChange.category_id)?.name ?? 'Sem categoria'}</b> foi o que mais mudou: {w.topChange.diff > 0 ? 'subiu' : 'caiu'} <Money v={Math.abs(w.topChange.diff)} className="text-mist-1" /></p>
+        </div>
+      )}
+      {w.biggest && (
+        <div className="panel-quiet flex items-center gap-3 p-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/5 text-mist-2"><Icon name="alert" size={17} /></span>
+          <p className="text-[13px] leading-snug text-mist-2">Maior gasto: <b className="text-mist-1">{w.biggest.description}</b>, <Money v={w.biggest.amount} className="text-mist-1" /> · média de <Money v={w.perDay} className="text-mist-1" /> por dia</p>
+        </div>
+      )}
+    </section>
   );
 }
 

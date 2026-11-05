@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { fmt, fmtShort } from '../domain/money';
 import { addMonths, monthLabel } from '../domain/dates';
 import { Icon } from './Icon';
@@ -22,7 +23,8 @@ export function Sheet({ open, onClose, title, children, wide = false }: { open: 
     return () => { document.removeEventListener('keydown', k); document.body.style.overflow = ''; };
   }, [open, onClose]);
   if (!open) return null;
-  return (
+  // renderiza direto no <body>: assim a janela fica sempre por cima de tudo, de qualquer tela que a abra
+  return createPortal(
     <div className="sheet-backdrop fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm md:items-center md:p-6" onMouseDown={e => e.target === e.currentTarget && onClose()} role="dialog" aria-modal="true" aria-label={title}>
       <div ref={ref} className={`sheet panel safe-b max-h-[92dvh] w-full overflow-y-auto rounded-b-none p-5 md:rounded-b-[var(--radius)] ${wide ? 'md:max-w-2xl' : 'md:max-w-lg'}`} style={{ background: 'var(--sheet-bg)' }}>
         <div className="mx-auto -mt-2 mb-3 h-1 w-10 rounded-full bg-white/15 md:hidden" />
@@ -32,7 +34,8 @@ export function Sheet({ open, onClose, title, children, wide = false }: { open: 
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

@@ -57,7 +57,7 @@ function seed(): Data {
       add(m, 26, 'Farmácia Nissei', 57.8, 'Saúde', { payer_id: her.id, shared: false, created_by: her.id });
       add(m, 18, 'Uber', 23.4, 'Transporte', { payer_id: her.id, shared: false, created_by: her.id });
     }
-    txs.push({ id: uuid(), household_id: H, description: 'Aporte reserva', notes: '', amount: 500, kind: 'investment', nature: null, category_id: c('Investimentos'), method: 'pix', card_id: null, wallet_id: 'w-reserva', occurred_on: dateIn(m, 6), month: m, paid: true, payer_id: null, shared: true, installment_group: null, installment_no: null, installment_total: null, recurring_id: null, created_by: me.id });
+    txs.push({ id: uuid(), household_id: H, description: 'Guardado · Reserva de emergência', notes: '', amount: 500, kind: 'investment', nature: null, category_id: c('Investimentos'), method: 'pix', card_id: null, wallet_id: 'w-reserva', occurred_on: dateIn(m, 6), month: m, paid: true, payer_id: null, shared: true, installment_group: null, installment_no: null, installment_total: null, recurring_id: null, created_by: me.id });
   });
   add(now, 3, 'Restaurante aniversário', 238, 'Restaurantes & Delivery', { payer_id: her.id, created_by: her.id });
   add(now, 1, 'Ração', 149.9, 'Pets & Casa', { paid: true });
@@ -117,6 +117,7 @@ export class DemoBackend implements Backend {
   }
   async createHousehold() {}
   async joinHousehold() {}
+  async newInviteCode() { const c = Math.random().toString(16).slice(2, 10).toUpperCase(); this.data.household!.invite_code = c; this.save(); return c; }
   async importTransactions(rows: Record<string, unknown>[]) { await this.upsert('transactions', rows); return rows.length; }
   subscribe(_h: string, _cb: (c: Change) => void) { return () => {}; }
 }

@@ -104,7 +104,7 @@ function Shell() {
           {view === 'home' && <Home onOpen={open} go={v => setView(v as View)} />}
           {view === 'tx' && <Transactions onOpen={open} />}
           {view === 'cards' && <Cards onOpen={open} />}
-          {view === 'plan' && <Plan />}
+          {view === 'plan' && <Plan onOpen={open} />}
           {view === 'settings' && <Settings />}
         </main>
       </div>

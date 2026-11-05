@@ -7,7 +7,7 @@ export interface PersonMonth {
   share: number;         // fração das despesas do casal que cabe a ela (0..1)
   sharedPart: number;    // quanto das despesas do casal cabe a ela
   personal: number;      // despesas só dela
-  invested: number;      // aportes que ela fez sozinha
+  invested: number;      // o que ela guardou sozinha (menos o que resgatou)
   free: number;          // o que sobra para ela no mês
   paidShared: number;    // quanto ela já pagou do bolso das despesas do casal
 }
@@ -18,7 +18,7 @@ export interface MonthMetrics {
   income: number;
   expenses: number;
   invested: number;
-  net: number;           // sobra do mês (renda − despesas − aportes)
+  net: number;           // sobra do mês (renda − despesas − guardado)
   carried: number;       // saldo acumulado de meses anteriores
   balance: number;       // net + carried
   pending: number;       // despesas ainda não pagas no mês
@@ -30,12 +30,15 @@ export interface MonthMetrics {
 }
 
 const isOut = (t: Tx) => t.kind !== 'income';
+/** Resgate: dinheiro que volta de uma reserva para a conta. Não é renda — é guardado negativo. */
+export const isRescue = (t: Tx) => t.kind === 'income' && !!t.wallet_id;
+const isIncome = (t: Tx) => t.kind === 'income' && !t.wallet_id;
 
 export function monthMetrics(data: Data, month: string): MonthMetrics {
   const txs = data.transactions.filter(t => t.month === month);
-  const income = sum(txs.filter(t => t.kind === 'income'), t => t.amount);
+  const income = sum(txs.filter(isIncome), t => t.amount);
   const expenses = sum(txs.filter(t => t.kind === 'expense'), t => t.amount);
-  const invested = sum(txs.filter(t => t.kind === 'investment'), t => t.amount);
+  const invested = round2(sum(txs.filter(t => t.kind === 'investment'), t => t.amount) - sum(txs.filter(isRescue), t => t.amount));
   const net = round2(income - expenses - invested);
   const carried = sum(data.transactions.filter(t => t.month < month), t => (t.kind === 'income' ? t.amount : -t.amount));
   const pending = sum(txs.filter(t => isOut(t) && !t.paid), t => t.amount);
@@ -43,8 +46,8 @@ export function monthMetrics(data: Data, month: string): MonthMetrics {
   const variable = round2(expenses - fixed);
 
   const members = data.members;
-  const jointIncome = sum(txs.filter(t => t.kind === 'income' && !t.payer_id), t => t.amount);
-  const incomeOf = (m: Member) => round2(sum(txs.filter(t => t.kind === 'income' && t.payer_id === m.id), t => t.amount) + (members.length ? jointIncome / members.length : 0));
+  const jointIncome = sum(txs.filter(t => isIncome(t) && !t.payer_id), t => t.amount);
+  const incomeOf = (m: Member) => round2(sum(txs.filter(t => isIncome(t) && t.payer_id === m.id), t => t.amount) + (members.length ? jointIncome / members.length : 0));
   const totalIncome = sum(members, incomeOf);
   const shareOf = (m: Member) => {
     if (members.length < 2) return 1;
@@ -57,7 +60,7 @@ export function monthMetrics(data: Data, month: string): MonthMetrics {
   const people: PersonMonth[] = members.map(m => {
     const share = shareOf(m);
     const personal = sum(txs.filter(t => t.kind === 'expense' && !t.shared && t.payer_id === m.id), t => t.amount);
-    const investedSolo = sum(txs.filter(t => t.kind === 'investment' && !t.shared && t.payer_id === m.id), t => t.amount);
+    const investedSolo = round2(sum(txs.filter(t => t.kind === 'investment' && !t.shared && t.payer_id === m.id), t => t.amount) - sum(txs.filter(t => isRescue(t) && t.payer_id === m.id), t => t.amount));
     const sharedPart = round2(sharedTotal * share);
     const inc = incomeOf(m);
     return {
@@ -105,4 +108,20 @@ export function categoryAverages(data: Data, months: string[]) {
   const acc = new Map<string, number>();
   months.forEach(mk => byCategory(data.transactions.filter(t => t.month === mk)).forEach(([c, v]) => { if (c) acc.set(c, (acc.get(c) || 0) + v / months.length); }));
   return acc;
+}
+
+/** Resumo dos últimos 7 dias (pela data real da compra) comparado com os 7 anteriores. */
+export function weekSummary(data: Data, todayIso: string) {
+  const day = (iso: string) => Math.round(new Date(iso + 'T12:00').getTime() / 864e5);
+  const t0 = day(todayIso);
+  const exp = data.transactions.filter(t => t.kind === 'expense');
+  const thisW = exp.filter(t => { const d = t0 - day(t.occurred_on); return d >= 0 && d < 7; });
+  const lastW = exp.filter(t => { const d = t0 - day(t.occurred_on); return d >= 7 && d < 14; });
+  const total = sum(thisW, t => t.amount), prev = sum(lastW, t => t.amount);
+  const byCat = (txs: Tx[]) => { const m = new Map<string | null, number>(); txs.forEach(t => m.set(t.category_id, round2((m.get(t.category_id) || 0) + t.amount))); return m; };
+  const a = byCat(thisW), b = byCat(lastW);
+  const changes = [...new Set([...a.keys(), ...b.keys()])].map(c => ({ category_id: c, now: a.get(c) || 0, before: b.get(c) || 0, diff: round2((a.get(c) || 0) - (b.get(c) || 0)) }))
+    .sort((x, y) => Math.abs(y.diff) - Math.abs(x.diff));
+  const biggest = [...thisW].sort((x, y) => y.amount - x.amount)[0] ?? null;
+  return { total, prev, diff: round2(total - prev), pct: prev > 0 ? ((total - prev) / prev) * 100 : null, count: thisW.length, perDay: round2(total / 7), topChange: changes[0] ?? null, biggest };
 }

@@ -9,6 +9,7 @@ import { THEMES, catColor } from '../ui/theme';
 import { Avatar, Money, Section, Seg, Sheet } from '../ui/kit';
 import { Icon } from '../ui/Icon';
 import { RecurringSheet } from './Plan';
+import { StatementImport } from '../ui/StatementImport';
 
 export const COLORS = ['#3DD9EB', '#FF7AB6', '#4BE3A6', '#FFC861', '#9B8CFF', '#FB923C', '#60A5FA', '#84CC16'];
 
@@ -139,6 +140,7 @@ function Couple() {
               const text = `Entra no nosso Finanças a Dois: ${link}`;
               if (navigator.share) await navigator.share({ text }).catch(() => {}); else { await navigator.clipboard.writeText(text); toast('Convite copiado'); }
             }}><Icon name="copy" size={15} />Enviar convite</button></div>
+          <button className="text-[13px] text-mist-2 underline-offset-4 hover:underline" onClick={async () => { try { await backend.newInviteCode(); await reload(true); toast('Código novo gerado — o anterior não vale mais'); } catch (e) { toast((e as Error).message); } }}>Gerar outro código</button>
         </>
       )}
       <p className="label mt-4">Despesas do casal são divididas</p>
@@ -197,6 +199,7 @@ function DataTools() {
   const [legacy, setLegacy] = useState<unknown>(null);
   const [p1, setP1] = useState<'me' | 'partner'>('me');
   const [busy, setBusy] = useState(false);
+  const [stmt, setStmt] = useState(false);
 
   const exportCsv = () => {
     const cat = (id: string | null) => data.categories.find(c => c.id === id)?.name ?? '';
@@ -237,12 +240,14 @@ function DataTools() {
             try { const j = JSON.parse(await file.text()); if (!Array.isArray(j.transactions)) throw new Error(); setLegacy(j); }
             catch { toast('Esse arquivo não é o backup JSON do app antigo.'); }
           }} /></label>
+        <button className="btn-ghost w-full justify-start" onClick={() => setStmt(true)}><Icon name="upload" size={16} />Importar extrato do banco (OFX/CSV)</button>
         <button className="btn-ghost w-full justify-start" onClick={exportCsv}><Icon name="download" size={16} />Baixar planilha (CSV)</button>
         <button className="btn-ghost w-full justify-start" onClick={() => download('financas-a-dois-backup.json', JSON.stringify(data, null, 1), 'application/json')}><Icon name="download" size={16} />Baixar backup completo (JSON)</button>
         <button className="btn-ghost w-full justify-start text-coral" onClick={() => signOut()}><Icon name="logout" size={16} />{backend.kind === 'demo' ? 'Reiniciar demonstração' : 'Sair desta conta'}</button>
       </div>
       {backend.kind === 'demo' && <p className="mt-3 text-[12px] text-amber">Modo demonstração: os dados ficam só neste navegador. Configure o Supabase (veja o README) para usar de verdade.</p>}
 
+      <StatementImport open={stmt} onClose={() => setStmt(false)} />
       <Sheet open={!!legacy} onClose={() => setLegacy(null)} title="Importar do app antigo">
         {legacy ? <LegacySummary old={legacy as Record<string, unknown>} /> : null}
         {!partner && <p className="panel-quiet mb-4 p-3 text-[13px] text-amber">Dica: importe depois que a outra pessoa entrar no casal — assim os lançamentos e a renda dela ficam no nome dela.</p>}

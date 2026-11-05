@@ -137,7 +137,7 @@
   --panel-border: 1px solid rgba(255,255,255,.55);
   --panel-shadow: inset 0 1px 1px rgba(255,255,255,.95), inset 0 -1px 1px rgba(255,255,255,.3), 0 12px 32px -12px rgba(30,40,90,.28);
   --panel-blur: blur(26px) saturate(200%);
-  --sheet-bg: rgba(244,247,255,.68);
+  --sheet-bg: rgba(246,248,255,.92);
   --field-bg: rgba(255,255,255,.55);
   --radius: 26px; --radius-sm: 16px;
   --font-display: 'Inter Variable', -apple-system, system-ui, sans-serif;
@@ -165,7 +165,7 @@
     --dock-bg: rgba(30,32,44,.62);
     --panel-border: 1px solid rgba(255,255,255,.16);
     --panel-shadow: inset 0 1px 1px rgba(255,255,255,.32), inset 0 -1px 1px rgba(255,255,255,.08), 0 16px 40px -14px rgba(0,0,0,.8);
-    --sheet-bg: rgba(26,28,40,.66);
+    --sheet-bg: rgba(24,26,38,.9);
     --field-bg: rgba(0,0,0,.28);
     --tint: 100%;
     --glass-edge: rgba(255,255,255,.45);

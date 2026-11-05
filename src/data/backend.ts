@@ -20,6 +20,8 @@ export interface Backend {
   ensureRecurring(months: string[]): Promise<number>;
   createHousehold(name: string, color: string): Promise<void>;
   joinHousehold(code: string, name: string, color: string): Promise<void>;
+  /** gera um código de convite novo e devolve */
+  newInviteCode(): Promise<string>;
   importTransactions(rows: Record<string, unknown>[]): Promise<number>;
   subscribe(householdId: string, cb: (c: Change) => void): () => void;
 }

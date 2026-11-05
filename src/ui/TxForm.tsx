@@ -35,7 +35,8 @@ export function TxForm({ tx, onDone, presetKind }: { tx?: Tx; onDone: () => void
     nature: (tx?.nature ?? 'variable') as Nature,
     paid: tx?.paid ?? true,
     notes: tx?.notes ?? '',
-    repeat: false
+    repeat: false,
+    wallet_id: tx?.wallet_id ?? data.wallets[0]?.id ?? ''
   }));
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => { setF(p => ({ ...p, [k]: v })); setTouched(t => new Set(t).add(k)); };
 
@@ -82,18 +83,20 @@ export function TxForm({ tx, onDone, presetKind }: { tx?: Tx; onDone: () => void
     e.preventDefault();
     if (!valid || locked) return;
     const s = getState();
+    const method: Method = f.kind === 'expense' ? f.method : 'pix'; // guardar e renda não usam cartão
     const H = s.data.household!.id;
     const payer = f.kind === 'income' && f.who === 'partner' ? 'me' : f.who;
     const cat = s.data.categories.find(c => c.id === f.category_id) ?? null;
     if (isNew) {
       const txs = buildTxs(
-        { description: f.description.trim(), amount: amount!, kind: f.kind, nature: f.kind === 'expense' ? f.nature : null, category: cat, method: f.method, cardId: f.method === 'card' ? f.card_id : null, installments: f.method === 'card' ? f.installments : 1, date: f.date, payer, shared: f.kind === 'income' ? false : f.shared },
+        { description: f.description.trim(), amount: amount!, kind: f.kind, nature: f.kind === 'expense' ? f.nature : null, category: cat, method, cardId: method === 'card' ? f.card_id : null, installments: method === 'card' ? f.installments : 1, date: f.date, payer, shared: f.kind === 'income' ? false : f.shared },
         { householdId: H, me, partner, cards: s.data.cards, notes: f.notes.trim() }
       );
-      if (f.method !== 'card') txs.forEach(t => (t.paid = f.paid));
+      if (method !== 'card') txs.forEach(t => (t.paid = f.paid));
+      txs.forEach(t => (t.wallet_id = f.kind === 'investment' ? f.wallet_id || null : null));
       if (f.repeat && txs.length === 1) {
         const t = txs[0];
-        const r: Recurring = { id: uuid(), household_id: H, description: t.description, amount: t.amount, kind: t.kind, nature: t.nature, category_id: t.category_id, method: t.method, card_id: t.card_id, wallet_id: null, day: Number(f.date.slice(8)), payer_id: t.payer_id, shared: t.shared, start_month: t.month, end_month: null, skipped: [], created_by: me.id };
+        const r: Recurring = { id: uuid(), household_id: H, description: t.description, amount: t.amount, kind: t.kind, nature: t.nature, category_id: t.category_id, method: t.method, card_id: t.card_id, wallet_id: t.wallet_id, day: Number(f.date.slice(8)), payer_id: t.payer_id, shared: t.shared, start_month: t.month, end_month: null, skipped: [], created_by: me.id };
         save('recurring', r as unknown as Record<string, unknown>);
         t.recurring_id = r.id;
       }
@@ -103,8 +106,8 @@ export function TxForm({ tx, onDone, presetKind }: { tx?: Tx; onDone: () => void
       const payer_id = payer === 'joint' ? null : payer === 'partner' ? partner?.id ?? me.id : me.id;
       const dateChanged = f.date !== tx!.occurred_on || f.card_id !== tx!.card_id || f.method !== tx!.method;
       let month = tx!.month;
-      if (dateChanged && !tx!.installment_group) month = f.method === 'card' && card ? invoiceMonth(card, f.date) : monthStart(f.date);
-      save('transactions', { ...tx!, description: f.description.trim(), amount: amount!, kind: f.kind, nature: f.kind === 'expense' ? f.nature : null, category_id: f.category_id || null, method: f.method, card_id: f.method === 'card' ? f.card_id : null, occurred_on: f.date, month, paid: f.paid, payer_id, shared: f.kind === 'income' ? false : f.shared, notes: f.notes.trim() } as unknown as Record<string, unknown>);
+      if (dateChanged && !tx!.installment_group) month = method === 'card' && card ? invoiceMonth(card, f.date) : monthStart(f.date);
+      save('transactions', { ...tx!, description: f.description.trim(), amount: amount!, kind: f.kind, nature: f.kind === 'expense' ? f.nature : null, category_id: f.category_id || null, method, card_id: method === 'card' ? f.card_id : null, occurred_on: f.date, month, paid: f.paid, payer_id, shared: f.kind === 'income' ? false : f.shared, notes: f.notes.trim(), wallet_id: f.kind === 'investment' ? f.wallet_id || null : tx!.kind === 'income' ? tx!.wallet_id : null } as unknown as Record<string, unknown>);
       toast('Alterações salvas');
     }
     onDone();
@@ -159,7 +162,7 @@ export function TxForm({ tx, onDone, presetKind }: { tx?: Tx; onDone: () => void
       )}
 
       <Seg label="Tipo" value={f.kind} onChange={v => { set('kind', v); if (v === 'income') { set('shared', false); if (f.who === 'partner') set('who', 'me'); } setF(p => ({ ...p, category_id: '' })); }}
-        options={[['expense', 'Despesa'], ['income', 'Renda'], ['investment', 'Aporte']]} />
+        options={[['expense', 'Despesa'], ['income', 'Renda'], ['investment', 'Guardar']]} />
 
       <div className="grid grid-cols-[1fr_auto] gap-3">
         <div><label className="label" htmlFor="tx-desc">Descrição</label><input id="tx-desc" className="field" value={f.description} onChange={e => set('description', e.target.value)} placeholder="Mercado" required /></div>
@@ -176,14 +179,24 @@ export function TxForm({ tx, onDone, presetKind }: { tx?: Tx; onDone: () => void
           </select></div>
       </div>
 
-      {f.kind !== 'income' && (
+      {f.kind === 'investment' && (
+        <div><label className="label" htmlFor="tx-wallet">Para qual reserva</label>
+          {data.wallets.length ? <select id="tx-wallet" className="field" value={f.wallet_id} onChange={e => set('wallet_id', e.target.value)}>
+            <option value="">Sem reserva específica</option>
+            {data.wallets.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+          </select> : <p className="panel-quiet p-3 text-[13px] text-mist-2">Crie uma reserva em Planejar → Guardado para acompanhar o saldo de cada uma.</p>}
+          <p className="mt-1.5 text-[12px] text-mist-3">Guardar não é gasto: o dinheiro sai da conta e vai para a reserva.</p>
+        </div>
+      )}
+
+      {f.kind === 'expense' && (
         <div>
           <span className="label">Como foi pago</span>
           <Seg label="Forma de pagamento" value={f.method} onChange={v => { set('method', v); set('paid', v !== 'card'); }} options={[['pix', 'Pix/débito'], ['card', 'Cartão'], ['boleto', 'Boleto'], ['cash', 'Dinheiro']]} />
         </div>
       )}
 
-      {f.method === 'card' && f.kind !== 'income' && (
+      {f.method === 'card' && f.kind === 'expense' && (
         data.cards.length === 0
           ? <p className="panel-quiet p-3 text-sm text-mist-2">Cadastre um cartão na aba Cartões para lançar compras nele.</p>
           : <div className="grid grid-cols-[1fr_auto] gap-3">
@@ -221,7 +234,7 @@ export function TxForm({ tx, onDone, presetKind }: { tx?: Tx; onDone: () => void
         </>
       )}
 
-      {f.method !== 'card' && (
+      {(f.method !== 'card' || f.kind !== 'expense') && (
         <div className="flex flex-wrap gap-2">
           <button type="button" className="chip" aria-pressed={f.paid} onClick={() => set('paid', !f.paid)}><Icon name="check" size={14} />{f.kind === 'income' ? 'Já recebido' : 'Já pago'}</button>
           {isNew && <button type="button" className="chip" aria-pressed={f.repeat} onClick={() => set('repeat', !f.repeat)}><Icon name="repeat" size={14} />Repetir todo mês</button>}

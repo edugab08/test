@@ -15,6 +15,7 @@ Stack: React + TypeScript + Tailwind (Vite), Supabase (Postgres, login e tempo r
 
 1. Crie uma conta em <https://supabase.com> e clique em **New project**. O plano grátis basta, e a região `South America (São Paulo)` é a mais rápida.
 2. No menu **SQL Editor**, clique em **New query**, cole todo o conteúdo de [`supabase/schema.sql`](supabase/schema.sql) e clique em **Run**.
+   Depois faça o mesmo com [`supabase/002_seguranca.sql`](supabase/002_seguranca.sql), que traz os reforços de segurança e o suporte à importação de extrato (veja [SEGURANCA.md](SEGURANCA.md)).
 3. O login é por **e-mail e senha**, que já vem ligado no Supabase.
    - Em **Authentication → Sign In / Providers → Email**, deixe *Confirm email* ligado. Assim cada conta confirma o e-mail antes do primeiro acesso.
    - O "Esqueci minha senha" usa esse mesmo e-mail.
@@ -52,6 +53,21 @@ O importador converte:
 Rode a importação uma vez só: importar duas vezes duplica os lançamentos.
 
 ---
+
+## Dinheiro guardado
+
+Em **Planejar → Guardado**:
+- **Reservas** são os lugares onde vocês guardam: caixinha, poupança, Tesouro, CDB.
+- **Guardar** tira o dinheiro da conta e coloca na reserva. Não é gasto.
+- **Resgatar** traz o dinheiro de volta. Não conta como renda.
+
+A tela mostra quanto rende por mês, quem guardou quanto no ano, a projeção para 12 meses e as metas, com quanto guardar por mês e quando vocês chegam lá no ritmo atual.
+
+## Importar extrato do banco
+
+Em **Lançamentos → Importar extrato**, escolha o arquivo OFX ou CSV exportado do Nubank, do Inter ou de outro banco. Você confere a lista antes de lançar:
+- Pagamentos de fatura e estornos vêm desmarcados.
+- Reimportar o mesmo arquivo não duplica nada.
 
 ## Estilos visuais
 

@@ -79,7 +79,16 @@ export class SupabaseBackend implements Backend {
     return Number(data) || 0;
   }
   async createHousehold(name: string, color: string) { const { error } = await this.sb.rpc('create_household', { p_name: name, p_color: color }); if (error) throw new Error(error.message); }
-  async joinHousehold(code: string, name: string, color: string) { const { error } = await this.sb.rpc('join_household', { p_code: code, p_name: name, p_color: color }); if (error) throw new Error(error.message); }
+  async joinHousehold(code: string, name: string, color: string) {
+    const { data, error } = await this.sb.rpc('join_household', { p_code: code, p_name: name, p_color: color });
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('Código de convite não encontrado. Confira as letras e números.');
+  }
+  async newInviteCode() {
+    const { data, error } = await this.sb.rpc('new_invite_code');
+    if (error) throw new Error(error.message);
+    return String(data);
+  }
   async importTransactions(rows: Record<string, unknown>[]) {
     let n = 0;
     for (let i = 0; i < rows.length; i += 500) {

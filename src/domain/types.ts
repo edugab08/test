@@ -29,6 +29,8 @@ export interface Tx extends TxBase {
   paid: boolean;
   installment_group: string | null; installment_no: number | null; installment_total: number | null;
   recurring_id: string | null;
+  /** id da transação no extrato do banco (evita importar duas vezes) */
+  external_id?: string | null;
   created_at?: string; updated_at?: string;
 }
 export interface Settlement { id: string; household_id: string; month: string; from_member: string; to_member: string; amount: number; note: string; created_at?: string }

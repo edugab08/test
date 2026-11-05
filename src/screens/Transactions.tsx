@@ -7,6 +7,7 @@ import { meOf, partnerOf, useStore } from '../data/store';
 import { Empty, Money } from '../ui/kit';
 import { Icon } from '../ui/Icon';
 import { TxRow } from '../ui/TxRow';
+import { StatementImport } from '../ui/StatementImport';
 
 type Filter = 'all' | 'shared' | 'me' | 'partner' | 'income' | 'pending' | 'card';
 
@@ -16,6 +17,7 @@ export function Transactions({ onOpen }: { onOpen: (t: Tx) => void }) {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [cat, setCat] = useState('');
+  const [importing, setImporting] = useState(false);
 
   const list = useMemo(() => {
     const nq = norm(q.trim());
@@ -53,9 +55,12 @@ export function Transactions({ onOpen }: { onOpen: (t: Tx) => void }) {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div className="panel p-3">
-        <div className="relative">
-          <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-mist-3" />
-          <input className="field pl-10" placeholder="Buscar em todos os meses" value={q} onChange={e => setQ(e.target.value)} aria-label="Buscar lançamentos" />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-mist-3" />
+            <input className="field pl-10" placeholder="Buscar em todos os meses" value={q} onChange={e => setQ(e.target.value)} aria-label="Buscar lançamentos" />
+          </div>
+          <button className="btn-ghost shrink-0" onClick={() => setImporting(true)} title="Importar extrato do banco"><Icon name="upload" size={17} /><span className="hidden sm:inline">Importar extrato</span><span className="sr-only sm:hidden">Importar extrato</span></button>
         </div>
         <div className="scroll-x -mx-1 mt-3 flex gap-2 px-1">
           {chips.map(([k, l]) => <button key={k} className="chip shrink-0" aria-pressed={filter === k} onClick={() => setFilter(k)}>{l}</button>)}
@@ -82,6 +87,7 @@ export function Transactions({ onOpen }: { onOpen: (t: Tx) => void }) {
           <ul>{txs.map(t => <TxRow key={t.id} t={t} data={data} onOpen={onOpen} meId={me.id} />)}</ul>
         </section>
       ))}
+      <StatementImport open={importing} onClose={() => setImporting(false)} />
     </div>
   );
 }

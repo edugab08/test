@@ -110,7 +110,7 @@ async function flush() {
     set({ sync: 'ok', pending: 0 });
   } finally { flushing = false; }
 }
-const translate = (m: string) => /row-level security|permission/i.test(m) ? 'só a própria pessoa pode alterar a renda dela.' : m;
+const translate = (m: string) => /row-level security/i.test(m) ? 'só a própria pessoa pode alterar a renda dela.' : /Referência inválida/i.test(m) ? 'algo neste lançamento não pertence ao casal.' : /permission denied/i.test(m) ? 'sem permissão para essa alteração.' : m;
 
 window.addEventListener('online', () => { set({ sync: 'saving' }); void flush().then(() => reload()); });
 window.addEventListener('offline', () => set({ sync: 'offline' }));

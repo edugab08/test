@@ -120,7 +120,7 @@ export function Onboarding() {
         <button type="button" aria-pressed={mode === 'join'} onClick={() => setMode('join')}>Tenho um convite</button>
       </div>
       <form className="space-y-4" onSubmit={go}>
-        {mode === 'join' && <div><label className="label" htmlFor="ob-code">Código do convite</label><input id="ob-code" className="field num text-center text-xl tracking-[.3em] uppercase" maxLength={6} value={code} onChange={e => setCode(e.target.value)} required /></div>}
+        {mode === 'join' && <div><label className="label" htmlFor="ob-code">Código do convite</label><input id="ob-code" className="field num text-center text-xl tracking-[.3em] uppercase" maxLength={8} value={code} onChange={e => setCode(e.target.value)} required /></div>}
         <div><label className="label" htmlFor="ob-name">Como você quer ser chamado(a)</label><input id="ob-name" className="field" value={name} onChange={e => setName(e.target.value)} placeholder="Seu nome" required autoFocus /></div>
         <div><span className="label">Sua cor</span>
           <div className="flex flex-wrap gap-2.5">{COLORS.map(c => <button type="button" key={c} onClick={() => setColor(c)} className="h-9 w-9 rounded-full" style={{ background: c, boxShadow: color === c ? `0 0 0 3px #0b1020, 0 0 0 5px ${c}` : 'none' }} aria-label={`Cor ${c}`} aria-pressed={color === c} />)}</div></div>

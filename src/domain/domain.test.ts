@@ -162,3 +162,106 @@ describe('importação do app antigo', () => {
 });
 
 it('addMonths atravessa o ano', () => expect(addMonths('2026-11-01', 3)).toBe('2027-02-01'));
+
+import { goalStatus, savings, walletBalance } from './savings';
+
+describe('dinheiro guardado', () => {
+  const w = { id: 'w1', household_id: H, name: 'Reserva', base_balance: 1000, rate: 12 };
+  const txs = [
+    tx({ kind: 'income', nature: null, amount: 5000, payer_id: edu.id, shared: false }),
+    tx({ kind: 'investment', nature: null, amount: 800, wallet_id: 'w1', payer_id: edu.id, shared: false }),
+    tx({ kind: 'investment', nature: null, amount: 400, wallet_id: 'w1', payer_id: null }),
+    tx({ kind: 'income', nature: null, amount: 300, wallet_id: 'w1', payer_id: edu.id, shared: false, description: 'Resgate' }),
+    tx({ kind: 'investment', nature: null, amount: 500, wallet_id: 'w1', payer_id: null, month: '2026-10-01' })
+  ];
+  const d = { ...data(txs), wallets: [w], goals: [{ id: 'g', household_id: H, name: 'Viagem', target: 3000, deadline: '2027-05-01', wallet_id: 'w1' }] };
+  it('resgate devolve dinheiro da reserva e não conta como renda', () => {
+    expect(walletBalance(w, txs)).toBe(1000 + 800 + 400 - 300 + 500);
+    const m = monthMetrics(d, '2026-11-01');
+    expect(m.income).toBe(5000);
+    expect(m.invested).toBe(900);
+    expect(m.net).toBe(4100);
+    expect(m.people[0].invested).toBe(500); // Eduardo guardou 800 sozinho e resgatou 300
+  });
+  it('resumo, quem guardou e projeção', () => {
+    const s = savings(d, '2026-11-01');
+    expect(s.total).toBe(2400);
+    expect(s.savedThisMonth).toBe(900);
+    expect(s.byPerson.find(p => p.member?.id === edu.id)?.amount).toBe(500);
+    expect(s.byPerson.find(p => p.member === null)?.amount).toBe(900);
+    expect(s.history.at(-1)!.total).toBe(2400);
+    expect(s.history.at(-2)!.total).toBe(1500);
+    expect(s.projection).toHaveLength(12);
+    expect(s.projection[0].total).toBeGreaterThan(2400);
+  });
+  it('meta: quanto falta, quanto por mês e quando chega', () => {
+    const s = savings(d, '2026-11-01');
+    const g = goalStatus(d.goals[0], d, '2026-11-01', s);
+    expect(g.current).toBe(2400);
+    expect(g.missing).toBe(600);
+    expect(g.monthsLeft).toBe(6);
+    expect(g.perMonth).toBe(100);
+    expect(g.eta).not.toBeNull();
+  });
+});
+
+import { looksLikeInvoicePayment, parseStatement } from './statement';
+
+describe('extrato do banco', () => {
+  it('OFX de conta', () => {
+    const ofx = `OFXHEADER:100
+<OFX><BANKMSGSRSV1><STMTTRNRS><STMTRS><BANKTRANLIST>
+<STMTTRN><TRNTYPE>DEBIT<DTPOSTED>20261103000000[-3:BRT]<TRNAMT>-45.90<FITID>abc1<MEMO>Compra no débito - MERCADO CONDOR
+</STMTTRN>
+<STMTTRN><TRNTYPE>CREDIT<DTPOSTED>20261105<TRNAMT>5200.00<FITID>abc2<MEMO>Salário iFibra
+</STMTTRN></BANKTRANLIST></STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>`;
+    const s = parseStatement(ofx);
+    expect(s).toMatchObject({ format: 'ofx', source: 'account' });
+    expect(s.rows).toEqual([
+      { externalId: 'ofx:abc1', date: '2026-11-03', description: 'Compra no débito - MERCADO CONDOR', amount: -45.9 },
+      { externalId: 'ofx:abc2', date: '2026-11-05', description: 'Salário iFibra', amount: 5200 }
+    ]);
+  });
+  it('fatura do Nubank (CSV): compras positivas viram saída', () => {
+    const csv = `date,title,amount\n2026-10-28,Ifood *Restaurante,45.90\n2026-10-29,Uber *Trip,23.40\n2026-11-02,Pagamento recebido,-1200.00\n2026-10-29,Uber *Trip,23.40`;
+    const s = parseStatement(csv, 'Nubank_2026-11-10.csv');
+    expect(s.source).toBe('card');
+    expect(s.rows.map(r => r.amount)).toEqual([-45.9, -23.4, 1200, -23.4]);
+    // duas corridas iguais no mesmo dia continuam sendo duas
+    expect(new Set(s.rows.map(r => r.externalId)).size).toBe(4);
+    expect(looksLikeInvoicePayment(s.rows[2].description)).toBe(true);
+  });
+  it('conta do Nubank (CSV) com identificador', () => {
+    const csv = `Data,Valor,Identificador,Descrição\n03/11/2026,-120.00,6543a1,Transferência enviada pelo Pix - MARINA\n05/11/2026,5200.00,6543a2,Transferência recebida - IFIBRA`;
+    const s = parseStatement(csv);
+    expect(s.rows[0]).toEqual({ externalId: 'csv:6543a1', date: '2026-11-03', description: 'Transferência enviada pelo Pix - MARINA', amount: -120 });
+    expect(s.rows[1].amount).toBe(5200);
+  });
+  it('Inter (CSV com ; e linhas antes da tabela)', () => {
+    const csv = `Extrato Conta Corrente\nConta ;12345\n\nData Lançamento;Histórico;Descrição;Valor;Saldo\n01/11/2026;Pix enviado ;Posto Ipiranga;-180,00;1.020,00\n02/11/2026;Pix recebido;Marina;1.500,50;2.520,50`;
+    const s = parseStatement(csv);
+    expect(s.rows).toHaveLength(2);
+    expect(s.rows[0]).toMatchObject({ date: '2026-11-01', description: 'Pix enviado · Posto Ipiranga', amount: -180 });
+    expect(s.rows[1].amount).toBe(1500.5);
+  });
+  it('mesmo arquivo gera os mesmos ids (reimportar não duplica)', () => {
+    const csv = `date,title,amount\n2026-10-28,Ifood,45.90`;
+    expect(parseStatement(csv).rows[0].externalId).toBe(parseStatement(csv).rows[0].externalId);
+  });
+});
+
+import { weekSummary } from './metrics';
+it('resumo da semana compara com a anterior', () => {
+  const d = data([
+    tx({ amount: 100, occurred_on: '2026-11-04', category_id: 'c-Mercado' }),
+    tx({ amount: 50, occurred_on: '2026-10-29', category_id: 'c-Restaurantes & Delivery' }),
+    tx({ amount: 60, occurred_on: '2026-10-27', category_id: 'c-Mercado' }),
+    tx({ amount: 999, occurred_on: '2026-10-01' })
+  ]);
+  const w = weekSummary(d, '2026-11-04');
+  expect(w.total).toBe(150);
+  expect(w.prev).toBe(60);
+  expect(w.diff).toBe(90);
+  expect(w.biggest?.amount).toBe(100);
+  expect(w.topChange?.category_id).toBe('c-Restaurantes & Delivery');
+});
