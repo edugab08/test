@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import type { Recurring, Tx } from '../domain/types';
 import { Savings } from './Savings';
-import { categoryAverages } from '../domain/metrics';
 import { addMonths, dateIn, monthLabel, monthStart, thisMonth } from '../domain/dates';
 import { invoiceMonth } from '../domain/cards';
+import { categoryAverages, spendingOf } from '../domain/metrics';
 import { fmt, parseAmount, sum } from '../domain/money';
 import { del, getState, meOf, save, toast, useStore } from '../data/store';
 import { Money, Section, Seg, Sheet } from '../ui/kit';
@@ -29,7 +29,8 @@ export function Plan({ onOpen }: { onOpen: (t: Tx) => void }) {
 function Budgets() {
   const data = useStore(s => s.data), month = useStore(s => s.month);
   const cats = data.categories.filter(c => c.kind === 'expense' && !c.archived);
-  const spentOf = (id: string) => sum(data.transactions.filter(t => t.month === month && t.kind === 'expense' && t.category_id === id), t => t.amount);
+  const spending = spendingOf(data, month);
+  const spentOf = (id: string) => sum(spending.filter(t => t.category_id === id), t => t.amount);
   const withBudget = cats.filter(c => c.budget);
   const totB = sum(withBudget, c => c.budget!), totS = sum(withBudget, c => spentOf(c.id));
   const suggest = () => {

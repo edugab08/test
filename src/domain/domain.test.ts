@@ -285,3 +285,14 @@ describe('fatura aberta e lista do mês', () => {
     expect(inMonthList(tx({}), '2026-11-01')).toBe(true);
   });
 });
+
+import { spendingOf } from './metrics';
+it('gastos por categoria contam compras do mês, inclusive no cartão', () => {
+  const d = data([
+    tx({ amount: 9.45, category_id: 'c-Transporte', occurred_on: '2026-11-03' }),
+    tx({ amount: 23.4, category_id: 'c-Transporte', method: 'card', card_id: 'x', occurred_on: '2026-11-04', month: '2026-12-01', paid: false }),
+    tx({ amount: 40, category_id: 'c-Transporte', method: 'card', card_id: 'x', occurred_on: '2026-10-29', month: '2026-11-01' })
+  ]);
+  expect(sum(spendingOf(d, '2026-11-01').filter(t => t.category_id === 'c-Transporte'), t => t.amount)).toBe(32.85);
+  expect(monthMetrics(d, '2026-11-01').expenses).toBe(49.45); // a sobra continua pelo vencimento da fatura
+});

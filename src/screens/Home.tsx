@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { byCategory, inMonthList, monthMetrics, rule503020, weekSummary } from '../domain/metrics';
+import { byCategory, inMonthList, monthMetrics, rule503020, spendingOf, weekSummary } from '../domain/metrics';
 import { parts, MONTHS_SHORT, monthLabel, thisMonth, today } from '../domain/dates';
 import { fmt, parseAmount, round2 } from '../domain/money';
 import { cardInvoice } from '../domain/cards';
@@ -17,7 +17,9 @@ export function Home({ onOpen, go }: { onOpen: (t: Tx) => void; go: (v: string) 
   const r = rule503020(m);
   const [settleOpen, setSettleOpen] = useState(false);
 
-  const cats = byCategory(m.txs).map(([id, v]) => { const c = data.categories.find(x => x.id === id); return { label: c?.name ?? 'Sem categoria', color: catColor(c?.color), value: v, icon: c?.icon ?? 'box' }; });
+  const spending = useMemo(() => spendingOf(data, month), [data, month]);
+  const [allCats, setAllCats] = useState(false);
+  const cats = byCategory(spending).map(([id, v]) => { const c = data.categories.find(x => x.id === id); return { label: c?.name ?? 'Sem categoria', color: catColor(c?.color), value: v, icon: c?.icon ?? 'box' }; });
   const totalCats = cats.reduce((s, c) => s + c.value, 0);
 
   const year = parts(month).y;
@@ -29,7 +31,7 @@ export function Home({ onOpen, go }: { onOpen: (t: Tx) => void; go: (v: string) 
   // Avisos: orçamento estourando, fatura vencendo, contas pendentes
   const alerts: { icon: string; text: string; tone: string; to?: string }[] = [];
   data.categories.filter(c => c.budget && c.kind === 'expense').forEach(c => {
-    const spent = m.txs.filter(t => t.category_id === c.id && t.kind === 'expense').reduce((s, t) => s + t.amount, 0);
+    const spent = spending.filter(t => t.category_id === c.id).reduce((s, t) => s + t.amount, 0);
     const p = spent / c.budget!;
     if (p >= 0.8) alerts.push({ icon: 'alert', tone: p >= 1 ? 'text-coral' : 'text-amber', text: p >= 1 ? `${c.name} passou ${fmt(spent - c.budget!)} do limite` : `${c.name} já usou ${Math.round(p * 100)}% do limite`, to: 'plan' });
   });
@@ -111,18 +113,21 @@ export function Home({ onOpen, go }: { onOpen: (t: Tx) => void; go: (v: string) 
 
       {month === thisMonth() && <WeekCard />}
 
-      <Section title="Para onde foi" className="lg:col-span-7">
+      <Section title="Para onde foi" className="lg:col-span-7" action={<span className="text-[12px] text-mist-3">compras do mês, inclusive no cartão</span>}>
         {cats.length === 0 ? <p className="py-6 text-center text-sm text-mist-2">Nenhuma despesa neste mês.</p> : (
           <div className="flex flex-col items-center gap-5 sm:flex-row">
             <Donut items={cats} center={<div><p className="text-[11px] text-mist-3">despesas</p><Money v={totalCats} className="text-lg font-semibold" /></div>} />
-            <ul className="w-full flex-1 space-y-2.5">
-              {cats.slice(0, 6).map(c => (
+            <div className="w-full flex-1">
+            <ul className="space-y-2.5">
+              {(allCats ? cats : cats.slice(0, 6)).map(c => (
                 <li key={c.label}>
-                  <div className="flex items-center gap-2 text-sm"><Icon name={c.icon} size={15} className="shrink-0" stroke={2} /><span className="flex-1 truncate" style={{ color: tint(c.color) }}>{c.label}</span><Money v={c.value} className="font-medium" /><span className="w-9 text-right text-[12px] text-mist-3">{Math.round((c.value / totalCats) * 100)}%</span></div>
+                  <div className="flex items-center gap-2 text-sm"><Icon name={c.icon} size={15} className="shrink-0" stroke={2} /><span className="flex-1 truncate" style={{ color: tint(c.color) }}>{c.label}</span><Money v={c.value} className="font-medium" /><span className="w-10 shrink-0 text-right text-[12px] text-mist-3">{Math.round((c.value / totalCats) * 100)}%</span></div>
                   <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/5"><div className="h-full rounded-full" style={{ width: `${(c.value / cats[0].value) * 100}%`, background: c.color }} /></div>
                 </li>
               ))}
             </ul>
+            {cats.length > 6 && <button className="mt-3 text-[13px] font-medium text-me" onClick={() => setAllCats(!allCats)}>{allCats ? 'Mostrar menos' : `Ver todas as ${cats.length} categorias`}</button>}
+            </div>
           </div>
         )}
       </Section>

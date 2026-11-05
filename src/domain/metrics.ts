@@ -106,7 +106,7 @@ export function byCategory(txs: Tx[]) {
 /** Média de gasto por categoria nos últimos n meses antes de `month` — base para sugerir orçamentos. */
 export function categoryAverages(data: Data, months: string[]) {
   const acc = new Map<string, number>();
-  months.forEach(mk => byCategory(data.transactions.filter(t => t.month === mk)).forEach(([c, v]) => { if (c) acc.set(c, (acc.get(c) || 0) + v / months.length); }));
+  months.forEach(mk => byCategory(spendingOf(data, mk)).forEach(([c, v]) => { if (c) acc.set(c, (acc.get(c) || 0) + v / months.length); }));
   return acc;
 }
 
@@ -135,3 +135,10 @@ export function inMonthList(t: Tx, month: string): boolean {
   if (t.method === 'card' && t.kind !== 'income' && (t.installment_no ?? 1) === 1) return t.occurred_on.slice(0, 7) === month.slice(0, 7);
   return t.month === month;
 }
+
+/**
+ * Gastos de um mês por data de compra: o que vocês compraram no mês, inclusive no cartão
+ * (a 1ª parcela no mês da compra; as seguintes, no mês de cada fatura).
+ * Usado em "Para onde foi" e no orçamento. A sobra do mês continua pela data em que o dinheiro sai.
+ */
+export const spendingOf = (data: Data, month: string) => data.transactions.filter(t => t.kind === 'expense' && inMonthList(t, month));
